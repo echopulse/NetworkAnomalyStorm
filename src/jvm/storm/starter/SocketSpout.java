@@ -9,6 +9,7 @@ import backtype.storm.tuple.Values;
 import backtype.storm.utils.Utils;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.Map;
 /**
  * Created by fil on 08/11/14.
  */
-public class MySpout extends BaseRichSpout
+public class SocketSpout extends BaseRichSpout
 {
     SpoutOutputCollector _collector;
     TopologyContext _context;
@@ -44,7 +45,7 @@ public class MySpout extends BaseRichSpout
 
     @Override
     public void nextTuple() {
-        Utils.sleep(50);
+        Utils.sleep(100);
         try {
             String str;
             while ((str = reader.readLine()) != null) {
@@ -56,11 +57,13 @@ public class MySpout extends BaseRichSpout
         catch (Exception ex){}
     }
 
-    /*@Override
     public void close()
     {
-
-    }*/
+        try {
+            reader.close();
+            sock.close();
+        } catch (IOException e) {}
+    }
 
 
 

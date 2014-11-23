@@ -42,17 +42,29 @@ public class GraphBolt implements IRichBolt{
         }
 
 
-        String edgeName = srcIP + "->" + dstIP;
-        Edge edge = graph.getEdge(edgeName);
-        if(edge == null) {
-            graph.addEdge(edgeName, srcIP, dstIP);
-            edge = graph.getEdge(edgeName);
-            edge.addAttribute("count", 1);
-            edge.addAttribute("ui.label", 1);
+        String edgeName1 = srcIP + "->" + dstIP;
+        String edgeName2 = dstIP + "->" + srcIP;
+
+        Edge edge1 = graph.getEdge(edgeName1);
+        Edge edge2 = graph.getEdge(edgeName2);
+
+        if(edge1 == null && edge2 == null) {
+            edge1 = graph.addEdge(edgeName1, srcIP, dstIP);
+            //edge = graph.getEdge(edgeName);
+            edge1.addAttribute("count", 1);
+            edge1.addAttribute("ui.label", 1);
 
         }
         else
         {
+            Edge edge;
+            if(edge1 == null) {
+                edge = edge2;
+            }
+            else{
+                edge = edge1;
+            }
+
             int currentCount = edge.getAttribute("count");
             currentCount++;
             edge.setAttribute("count", currentCount);
