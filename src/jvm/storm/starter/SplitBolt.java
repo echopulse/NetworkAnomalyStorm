@@ -25,11 +25,19 @@ public class SplitBolt implements IRichBolt
 
     @Override
     public void execute(Tuple tuple) {
+        //Current tuple example:
+        //138.37.95.20,1414972694,138.37.88.245,138.37.89.120,2049,808
+        //switchIP, timestamp, srcIP, dstIP, srcPort, dstPort
+
         String str = tuple.getString(0);
         String[] elements = str.split(",");
 
-        String srcIP =  elements[9];
-        String dstIP = elements[10];
+        //String switchIP = elements[0];
+        //String timestamp = elements[1];
+        String srcIP =  elements[2];
+        String dstIP = elements[3];
+        String srcPort = elements[4];
+        String dstPort = elements[5];
 
         //clears empty cases
         if(srcIP.length() > 1 && dstIP.length() > 1) {
@@ -54,9 +62,11 @@ public class SplitBolt implements IRichBolt
                     dstSubnet = dstSubnet.substring(0, dstSubnet.length() - 1);
 
 
-                    _collector.emit(tuple, new Values(srcSubnet, dstSubnet));
+                    _collector.emit("Subnets", new Values(srcSubnet, dstSubnet));
+                    _collector.emit("Ports", new Values(srcPort, dstPort));
                 } catch (ArrayIndexOutOfBoundsException ex) {
-                    _collector.emit(tuple, new Values("ex", "ex"));
+                    _collector.emit("Subnets", new Values("ex", "ex"));
+                    _collector.emit("Ports", new Values("ex", "ex"));
                 }
             }
         }
@@ -70,8 +80,8 @@ public class SplitBolt implements IRichBolt
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("srcSubnet", "dstSubnet"));
-        //declarer.declareStream("B", new Fields("srcIP", "dstIP"));
+        declarer.declareStream("Subnets", new Fields("srcSubnet", "dstSubnet"));
+        declarer.declareStream("Ports", new Fields("srcPort", "dstPort"));
     }
 
     @Override

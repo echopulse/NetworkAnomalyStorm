@@ -20,57 +20,83 @@ public class GraphBolt implements IRichBolt{
     OutputCollector _collector;
     Graph graph;
 
+    //debug - checks if all connections are accounted for.
+    //int tCount = 0;
+    //int connCount = 0;
+
     @Override
     public void prepare(Map config, TopologyContext topology, OutputCollector collector) {
         _collector = collector;
         graph = new SingleGraph("Title");
     }
 
+    private Node createNode(String nodeName)
+    {
+        Node node = graph.addNode(nodeName);
+        node.setAttribute("ui.label", 0);
+        node.setAttribute("internalConnections", 0);
+        return node;
+    }
+
     @Override
     public void execute(Tuple tuple) {
+
+        //debug
+        //tCount++;
+
         String srcIP = tuple.getString(0);
         String dstIP = tuple.getString(1);
 
-        if(graph.getNode(srcIP) == null) {
-            Node n = graph.addNode(srcIP);
-            n.setAttribute("ui.label", srcIP);
+        Node srcNode = graph.getNode(srcIP);
+
+        if(!srcIP.equals(dstIP)) {
+            Node dstNode = graph.getNode(dstIP);
+
+            //Nodes
+            if (srcNode == null) {
+                srcNode = createNode(srcIP);
+            }
+            if (dstNode == null) {
+                dstNode = createNode(dstIP);
+            }
+
+            Edge edge = srcNode.getEdgeBetween(dstNode);
+            //Adds edges between nodes if none exist
+            if (edge == null)
+            {
+                edge = graph.addEdge(srcIP + "," + dstIP, srcNode, dstNode);
+                edge.addAttribute("count", 1);
+                edge.addAttribute("ui.label", 1);
+
+                //debug
+                //connCount++;
+            }
+            //Else increases the edge count property by one.
+            else
+            {
+                int currentCount = edge.getAttribute("count");
+                currentCount++;
+                edge.setAttribute("count", currentCount);
+                edge.setAttribute("ui.label", currentCount);
+
+                //debug
+                //connCount++;
+            }
         }
-
-        if(graph.getNode(dstIP) == null){
-            Node n = graph.addNode(dstIP);
-            n.setAttribute("ui.label", dstIP);
-        }
-
-
-        String edgeName1 = srcIP + "->" + dstIP;
-        String edgeName2 = dstIP + "->" + srcIP;
-
-        Edge edge1 = graph.getEdge(edgeName1);
-        Edge edge2 = graph.getEdge(edgeName2);
-
-        if(edge1 == null && edge2 == null) {
-            edge1 = graph.addEdge(edgeName1, srcIP, dstIP);
-            //edge = graph.getEdge(edgeName);
-            edge1.addAttribute("count", 1);
-            edge1.addAttribute("ui.label", 1);
-
-        }
+        //Internal Connection
         else
         {
-            Edge edge;
-            if(edge1 == null) {
-                edge = edge2;
+            if (srcNode == null) {
+                srcNode = createNode(srcIP);
             }
-            else{
-                edge = edge1;
-            }
-
-            int currentCount = edge.getAttribute("count");
+            int currentCount = srcNode.getAttribute("internalConnections");
             currentCount++;
-            edge.setAttribute("count", currentCount);
-            edge.setAttribute("ui.label", currentCount);
-        }
+            srcNode.setAttribute("internalConnections", currentCount);
+            srcNode.setAttribute("ui.label", currentCount);
 
+            //debug
+            //connCount++;
+        }
 
         _collector.ack(tuple);
 
@@ -78,7 +104,14 @@ public class GraphBolt implements IRichBolt{
 
     @Override
     public void cleanup() {
+        //graph.addAttribute("ui.screenshot", "/home/fil/Documents/WordCountStorm/screenshots/graph2.png");
+        for(Node n:graph) {
+            System.out.println(n.getId() +": "+ n.getAttribute("internalConnections"));
+        }
         graph.display();
+
+        //checks if all connections have been accounted for.
+        //System.out.println("connCount:" + connCount + "   tCount:" + tCount);
     }
 
     @Override
@@ -90,8 +123,6 @@ public class GraphBolt implements IRichBolt{
         return null;
     }
 }
-
-
 
 
 //Graph graph = new SingleGraph("Graph-Title");

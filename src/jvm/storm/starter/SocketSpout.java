@@ -39,7 +39,9 @@ public class SocketSpout extends BaseRichSpout
             reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
         }
         catch(Exception ex)
-        {}
+        {
+            System.out.println("Exception in SocketSpout while attempting connection: " + ex.getMessage());
+        }
 
     }
 
@@ -49,12 +51,14 @@ public class SocketSpout extends BaseRichSpout
         try {
             String str;
             while ((str = reader.readLine()) != null) {
-                if(str.startsWith("FLOW")) {
+                //if(str.startsWith("FLOW")) {
                     this._collector.emit(new Values(str));
-                }
+                //}
             }
         }
-        catch (Exception ex){}
+        catch (Exception ex){
+            System.out.println("Exception in SocketSpout while reading lines: " + ex.getMessage());
+        }
     }
 
     public void close()
@@ -62,7 +66,9 @@ public class SocketSpout extends BaseRichSpout
         try {
             reader.close();
             sock.close();
-        } catch (IOException e) {}
+        } catch (IOException ex) {
+            System.out.println("Exception in SocketSpout while closing socket or reader: " + ex.getMessage());
+        }
     }
 
 

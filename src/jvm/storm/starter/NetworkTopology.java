@@ -8,20 +8,27 @@ import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
 
-public class WordCountTopology {
+public class NetworkTopology {
 
   public static void main(String[] args) throws Exception {
 
     TopologyBuilder builder = new TopologyBuilder();
-
+    //Spout
     builder.setSpout("spout", new SocketSpout());
-    builder.setBolt("split", new SplitBolt(), 8).shuffleGrouping("spout");
-    //fieldsGrouping arguments - group all "srcSubnet" on the same machine.
-    builder.setBolt("count", new WordCount(), 12).fieldsGrouping("split", new Fields("srcSubnet"));
-    builder.setBolt("graph", new GraphBolt(), 1).shuffleGrouping("split");
+    //Split
+    builder.setBolt("split", new SplitBolt(), 3).shuffleGrouping("spout");
+    //Counts
+    builder.setBolt("portCount", new CountBolt(), 3).fieldsGrouping("split", "Ports", new Fields("srcPort"));
+    builder.setBolt("subnetCount", new CountBolt(), 3).fieldsGrouping("split", "Subnets", new Fields("srcSubnet"));
+    //Graph
+    builder.setBolt("graph", new GraphBolt(), 1).shuffleGrouping("split", "Subnets");
+    //Printers
+    builder.setBolt("printPorts", new PrinterBolt(), 1).shuffleGrouping("portCount");
+    builder.setBolt("printNets", new PrinterBolt(), 1).shuffleGrouping("subnetCount");
 
     Config conf = new Config();
-    conf.setDebug(true);
+    conf.setDebug(false);
+
 
 
     if (args != null && args.length > 0) {
@@ -36,7 +43,7 @@ public class WordCountTopology {
 
       LocalCluster cluster = new LocalCluster();
       cluster.submitTopology("word-count", conf, topology);
-      Thread.sleep(3000);
+      Thread.sleep(10000);
       //cluster.killTopology("word-count");
       cluster.shutdown();
 

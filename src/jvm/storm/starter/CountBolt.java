@@ -20,29 +20,30 @@ import org.graphstream.graph.implementations.*;
 /**
  * Created by fil on 08/11/14.
  */
-public class WordCount extends BaseBasicBolt {
+public class CountBolt extends BaseBasicBolt {
     Map<String, Integer> counts = new HashMap<String, Integer>();
+
 
 
     @Override
     public void execute(Tuple tuple, BasicOutputCollector collector) {
-        String srcIP = tuple.getString(0);
-        String dstIP = tuple.getString(1);
-        String IPs = srcIP+","+dstIP;
+        String src = tuple.getString(0);
+        String dst = tuple.getString(1);
+        String pairs = src+","+dst;
 
-        Integer count = counts.get(IPs);
+        Integer count = counts.get(pairs);
         if (count == null)
             count = 0;
         count++;
-        counts.put(IPs, count);
+        counts.put(pairs, count);
 
-        collector.emit(new Values(IPs, count));
+        collector.emit(new Values(pairs, count));
 
     }
 
     @Override
     public void cleanup() {
-        try{
+        /*try{
             PrintWriter file = new PrintWriter(new BufferedWriter(new FileWriter("bolt-output.txt", true)));
             file.println();
             file.println(new Date().toString());
@@ -54,8 +55,8 @@ public class WordCount extends BaseBasicBolt {
             file.close();
         }
         catch (IOException e) {
-
-        }
+            System.out.println("Cannot cleanup");
+        }*/
     }
 
     @Override

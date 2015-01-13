@@ -18,7 +18,7 @@ try:
         payload = []
         currtime = 0
         delay = 0
-        with open('timestampedDumps/dumpcsv-timestamped.20141103', 'r') as dump:
+        with open('/home/fil/Desktop/Python Server/timestampedDumps/dumpcsv-timestamped.20141103', 'r') as dump:
             for line in dump:
                 arr = line.split(',')
                 timestamp = long(arr[1])
