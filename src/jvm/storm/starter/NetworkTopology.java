@@ -18,13 +18,13 @@ public class NetworkTopology {
     //Split
     builder.setBolt("split", new SplitBolt(), 3).shuffleGrouping("spout");
     //Counts
-    builder.setBolt("portCount", new CountBolt(), 3).fieldsGrouping("split", "Ports", new Fields("srcPort"));
-    builder.setBolt("subnetCount", new CountBolt(), 3).fieldsGrouping("split", "Subnets", new Fields("srcSubnet"));
+    //builder.setBolt("portCount", new CountBolt(), 3).fieldsGrouping("split", "Ports", new Fields("srcPort"));
+    //builder.setBolt("subnetCount", new CountBolt(), 3).fieldsGrouping("split", "Subnets", new Fields("srcSubnet"));
     //Graph
-    builder.setBolt("graph", new GraphBolt(), 1).shuffleGrouping("split", "Subnets");
+    builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
     //Printers
-    builder.setBolt("printPorts", new PrinterBolt(), 1).shuffleGrouping("portCount");
-    builder.setBolt("printNets", new PrinterBolt(), 1).shuffleGrouping("subnetCount");
+    //builder.setBolt("printPorts", new PrinterBolt(), 1).shuffleGrouping("portCount");
+    //builder.setBolt("printNets", new PrinterBolt(), 1).shuffleGrouping("subnetCount");
 
     Config conf = new Config();
     conf.setDebug(false);
