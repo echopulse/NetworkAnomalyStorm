@@ -16,6 +16,8 @@ import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.ui.swingViewer.Viewer;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 
 public class GraphBolt implements IRichBolt{
@@ -27,7 +29,7 @@ public class GraphBolt implements IRichBolt{
     double decayWeight = 0;
 
 //    int tupleCount = 0;
-    //int connCount = 0;
+//    int connCount = 0;
 
 
     public GraphBolt(int newTickFrequency, double newDecayVar)
@@ -59,9 +61,41 @@ public class GraphBolt implements IRichBolt{
     private Node createNode(String nodeName)
     {
         Node node = graph.addNode(nodeName);
-        node.setAttribute("internalConnections", 0.0);
+        node.setAttribute("count", 0.0);
         node.setAttribute("ui.label", 0);
         return node;
+    }
+
+    private double[][] fillDependencyMatrix()
+    {
+        //build new matrix[nXn] where n = number of nodes
+        int n = graph.getNodeCount();
+        double[][] matrix = new double[n][n];
+
+        for(int i = 0; i < matrix.length; i++) {
+            Arrays.fill(matrix[i], 0);
+        }
+
+        //Edge counts
+        Iterator eIter = graph.getEachEdge().iterator();
+        while(eIter.hasNext()) {
+            Edge edge = (Edge)eIter.next();
+            int i = edge.getSourceNode().getIndex();
+            int j = edge.getTargetNode().getIndex();
+            double count = edge.getAttribute("count");
+            matrix[i][j] = count;
+            matrix[j][i] = count;
+        }
+
+        //Node counts, or internal network connections, are equivalent to the matrix diagonal
+        Iterator nIter = graph.getEachNode().iterator();
+        while(nIter.hasNext()){
+            Node node = (Node)nIter.next();
+            int i = node.getIndex();
+            double count = node.getAttribute("count");
+            matrix[i][i] = count;
+        }
+        return matrix;
     }
 
     @Override
@@ -84,20 +118,26 @@ public class GraphBolt implements IRichBolt{
             //Node count decay logic
             for(Node node : graph.getEachNode())
             {
-                double count = node.getAttribute("internalConnections");
+                double count = node.getAttribute("count");
                 count = count * (1 - decayWeight);
                 if(count < 1) {
-                    node.setAttribute("internalConnections", 0.0);
+                    node.setAttribute("count", 0.0);
                     node.setAttribute("ui.label", 0);
                 }
                 else {
-                    node.setAttribute("internalConnections", count);
+                    node.setAttribute("count", count);
                     node.setAttribute("ui.label", (int)count);
                 }
 
             }
-//            graph.display();
+
+            //Refresh Dependency Matrix
+            double[][] matrix = fillDependencyMatrix();
+
+            //calculate principal eigenvalue
+
         }
+        //INCREMENT GRAPH
         else {
 
             String srcIP = tuple.getString(0);
@@ -142,9 +182,9 @@ public class GraphBolt implements IRichBolt{
                 if (srcNode == null) {
                     srcNode = createNode(srcIP);
                 }
-                double currentCount = srcNode.getAttribute("internalConnections");
+                double currentCount = srcNode.getAttribute("count");
                 currentCount++;
-                srcNode.setAttribute("internalConnections", currentCount);
+                srcNode.setAttribute("count", currentCount);
                 srcNode.setAttribute("ui.label", currentCount);
 
                 //debug
@@ -160,7 +200,7 @@ public class GraphBolt implements IRichBolt{
     public void cleanup() {
         //graph.addAttribute("ui.screenshot", "/home/fil/Documents/WordCountStorm/screenshots/graph2.png");
 //        for(Node n:graph) {
-//            System.out.println(n.getId() +": "+ n.getAttribute("internalConnections"));
+//            System.out.println(n.getId() +": "+ n.getAttribute("count"));
 //        }
 //        graph.display();
 
@@ -171,11 +211,4 @@ public class GraphBolt implements IRichBolt{
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
     }
-
-
-
 }
-
-
-//Graph graph = new SingleGraph("Graph-Title");
-//graph.setAutoCreate(true);
