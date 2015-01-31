@@ -21,7 +21,10 @@ public class NetworkTopology {
     //builder.setBolt("portCount", new CountBolt(), 3).fieldsGrouping("split", "Ports", new Fields("srcPort"));
     //builder.setBolt("subnetCount", new CountBolt(), 3).fieldsGrouping("split", "Subnets", new Fields("srcSubnet"));
     //Graph
-    builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
+    //builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
+    //DependencyMatrix
+    builder.setBolt("matrix", new DependencyMatrixBolt(5, 0, 2), 1).shuffleGrouping("split", "Subnets");
+
     //Printers
     //builder.setBolt("printPorts", new PrinterBolt(), 1).shuffleGrouping("portCount");
     //builder.setBolt("printNets", new PrinterBolt(), 1).shuffleGrouping("subnetCount");
@@ -43,7 +46,7 @@ public class NetworkTopology {
 
       LocalCluster cluster = new LocalCluster();
       cluster.submitTopology("word-count", conf, topology);
-      Thread.sleep(10000);
+      Thread.sleep(20000);
       //cluster.killTopology("word-count");
       cluster.shutdown();
 

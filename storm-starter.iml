@@ -21,6 +21,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Python 2.7.6 (/usr/bin/python2.7) interpreter library" level="application" />
     <orderEntry type="library" scope="TEST" name="Maven: junit:junit:3.8.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.testng:testng:6.8.5" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.beanshell:bsh:2.0b4" level="project" />
@@ -97,6 +98,7 @@
     <orderEntry type="library" name="Maven: bouncycastle:bcprov-jdk14:138" level="project" />
     <orderEntry type="library" name="Maven: org.graphstream:gs-ui:1.2" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.10.0" level="project" />
+    <orderEntry type="library" name="Maven: org.jblas:jblas:1.2.3" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: reply:reply:0.3.0" level="project" />
     <orderEntry type="library" name="Maven: jline:jline:2.11" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.thnetos:cd-client:0.3.6" level="project" />
@@ -115,6 +117,5 @@
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.clojars.trptcolin:sjacket:0.1.0.3" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: net.cgrand:regex:1.1.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: net.cgrand:parsley:0.9.1" level="project" />
-    <orderEntry type="library" name="Python 2.7.6 (/usr/bin/python2.7) interpreter library" level="application" />
   </component>
 </module>

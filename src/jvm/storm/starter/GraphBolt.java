@@ -140,6 +140,7 @@ public class GraphBolt implements IRichBolt{
         //INCREMENT GRAPH
         else {
 
+            //NOTE: if tick tuples are not accounted for, ClassCastException will be thrown as it emits a Long value
             String srcIP = tuple.getString(0);
             String dstIP = tuple.getString(1);
 

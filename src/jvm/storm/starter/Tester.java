@@ -1,8 +1,13 @@
 package storm.starter;
 
-/**
- * Created by fil on 23/11/14.
- */
+import org.jblas.ComplexDouble;
+import org.jblas.ComplexDoubleMatrix;
+import org.jblas.DoubleMatrix;
+import org.jblas.Eigen;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class Tester {
 
     public static void main(String[] args)
@@ -18,9 +23,119 @@ public class Tester {
         arr[2] = c;
         arr[3] = d;
 
-        execute(arr);
+        //execute(arr);
+
+        findEigenvector();
 
 
+    }
+
+    private static void findEigenvector()
+    {
+        double[][] dOne = new double[][]{
+                {-1,2,2},
+                {2,2,-1},
+                {2,-1,2}
+        };
+
+        double[][] dThree = new double[][]{
+                {3,2,4},
+                {2,0,2},
+                {4,2,3}
+        };
+        double[][] dTwo = new double[][]{
+                {1,2},
+                {4,3}
+        };
+        double[][] dFour = new double[][] {
+                {1,1,0,0,1,0,0},
+                {1,1,0,0,1,0,0},
+                {0,0,1,1,1,0,0},
+                {0,0,1,1,1,0,0},
+                {1,1,1,1,1,1,1},
+                {0,0,0,0,1,1,1},
+                {0,0,0,0,1,1,1},
+        };
+        double[][] dFive = new double[][]{
+                {4,2,4},
+                {2,0,2},
+                {4,2,3}
+        };
+
+
+        DoubleMatrix matrix = new DoubleMatrix(dThree);
+        DoubleMatrix matrix2 = new DoubleMatrix(dFive);
+
+        ComplexDoubleMatrix eigenvalues = Eigen.eigenvalues(matrix);
+        for (ComplexDouble eigenvalue : eigenvalues.toArray()) {
+            System.out.print(String.format("%.2f ", eigenvalue.real()));
+        }
+        System.out.println();
+
+        List<Double> principalEigenvector = getPrincipalEigenvector(matrix);
+        System.out.println("principalEigenvector = " + principalEigenvector);
+
+        System.out.println("normalisedPrincipalEigenvector = " + normalised(principalEigenvector));
+
+        System.out.println("////");
+
+        ComplexDoubleMatrix eigenvalues2 = Eigen.eigenvalues(matrix2);
+        for (ComplexDouble eigenvalue : eigenvalues2.toArray()) {
+            System.out.print(String.format("%.2f ", eigenvalue.real()));
+        }
+        System.out.println();
+
+        List<Double> principalEigenvector2 = getPrincipalEigenvector(matrix2);
+        System.out.println("principalEigenvector = " + principalEigenvector2);
+
+        System.out.println("normalisedPrincipalEigenvector = " + normalised(principalEigenvector2));
+
+    }
+
+    //Code from http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
+    private static List<Double> getPrincipalEigenvector(DoubleMatrix matrix) {
+        int maxIndex = getMaxIndex(matrix);
+        ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0];
+        return getEigenVector(eigenVectors, maxIndex);
+    }
+
+    private static int getMaxIndex(DoubleMatrix matrix) {
+        ComplexDouble[] doubleMatrix = Eigen.eigenvalues(matrix).toArray();
+        int maxIndex = 0;
+        for (int i = 0; i < doubleMatrix.length; i++){
+            double newnumber = doubleMatrix[i].abs();
+            if ((newnumber > doubleMatrix[maxIndex].abs())){
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+
+    private static List<Double> getEigenVector(ComplexDoubleMatrix eigenvector, int columnId) {
+        ComplexDoubleMatrix column = eigenvector.getColumn(columnId);
+
+        List<Double> values = new ArrayList<Double>();
+        for (ComplexDouble value : column.toArray()) {
+            values.add(value.abs()  );
+        }
+        return values;
+    }
+
+    private static List<Double> normalised(List<Double> principalEigenvector) {
+        double total = sum(principalEigenvector);
+        List<Double> normalisedValues = new ArrayList<Double>();
+        for (Double aDouble : principalEigenvector) {
+            normalisedValues.add(aDouble / total);
+        }
+        return normalisedValues;
+    }
+
+    private static double sum(List<Double> principalEigenvector) {
+        double total = 0;
+        for (Double aDouble : principalEigenvector) {
+            total += aDouble;
+        }
+        return total;
     }
 
     private static void execute(String[] arr) {
