@@ -6,15 +6,15 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import org.jblas.ComplexDouble;
 import org.jblas.ComplexDoubleMatrix;
 import org.jblas.DoubleMatrix;
 import org.jblas.Eigen;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * Created by fil on 22/01/15.
@@ -28,7 +28,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     private int trainingTime = 0;
     private int lastMapValue = 0;
     private Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
-    private Map<Integer, String> IDtoIPMap;
+    //private Map<Integer, String> IDtoIPMap;
     private DoubleMatrix dependencyMatrix;
 
 
@@ -57,15 +57,17 @@ public class DependencyMatrixBolt implements IRichBolt {
         {
             if(tickCount > trainingTime)
             {
-                //finding principal eigen vector
-                //emitting eigen vector
+                //decay dependency matrix values
+                dependencyMatrix = dependencyMatrix.mul(1 - decayWeight);
+
+                //finding and emitting principal eigen vector
+                DoubleMatrix principalEigenvector = normalized(getPrincipalEigenvector(dependencyMatrix));
+                _collector.emit("EigenVector", new Values(principalEigenvector));
             }
             else
             {
                 tickCount++;
             }
-
-            //decay code
         }
         else
         {
@@ -73,7 +75,7 @@ public class DependencyMatrixBolt implements IRichBolt {
             String dstIP = tuple.getString(1);
 
             //map dimensions grow
-            if(tickCount < trainingTime)
+            if(tickCount <= trainingTime)
             {
                 incrementIDMap(srcIP, dstIP);
             }
@@ -82,20 +84,33 @@ public class DependencyMatrixBolt implements IRichBolt {
             {
                 if(dependencyMatrix == null)
                 {
-                    buildDependencyMatrix();
+                    dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue).fill(0);
+                }
+
+                //update values inside dependency matrix where they exist
+                Integer srcID = IPtoIDMap.get(srcIP);
+                Integer dstID = IPtoIDMap.get(dstIP);
+
+                if(srcID != null && dstID != null) {
+
+                    //TODO consider using ln to normalize values
+                    double countVal = dependencyMatrix.get(srcID, dstID);
+                    countVal++;
+                    dependencyMatrix.put(srcID, dstID, countVal);
+                    dependencyMatrix.put(dstID, srcID, countVal);
                 }
                 else
                 {
-                    //update values inside dependency matrix
-
+                    //TODO IPs not found -> emit as anomaly?
                 }
+
             }
         }
 
         _collector.ack(tuple);
     }
 
-    //Assigns IPs a unique int value in the matrixIDMap HashMap for later building the dependency matrix
+    //Assigns IPs a unique int value in the IPtoIDMap HashMap for later use in the dependency matrix
     private void incrementIDMap(String srcIP, String dstIP)
     {
         if(!srcIP.equals(dstIP)) {
@@ -117,23 +132,18 @@ public class DependencyMatrixBolt implements IRichBolt {
         }
     }
 
-    //Builds dependency matrix
-    private void buildDependencyMatrix()
+    //Builds dependency matrix filled with 0s
+    /*private void buildDependencyMatrix()
     {
-        IDtoIPMap = new TreeMap<Integer, String>();
+        //creates reverse map from ID to IP
+        *//*IDtoIPMap = new TreeMap<Integer, String>();
         for (Map.Entry<String, Integer> entry : IPtoIDMap.entrySet()) {
             IDtoIPMap.put(entry.getValue(), entry.getKey());
-        }
+        }*//*
 
-//        DEBUG
-//        for(Map.Entry<Integer, String> entry : IDtoIPMap.entrySet())
-//        {
-//            System.out.println("key: " + entry.getKey() + ", value: " + entry.getValue());
-//            System.out.println("lastMapValue: " + lastMapValue);
-//        }
-
-        dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue);
-    }
+        dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue).fill(0);
+        dependencyMatrix.fill(0);
+    }*/
 
     @Override
     public void cleanup() {
@@ -142,7 +152,12 @@ public class DependencyMatrixBolt implements IRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+        //single output
+        outputFieldsDeclarer.declare(new Fields("eVector"));
 
+        //multiple output
+        //outputFieldsDeclarer.declareStream("EigenVector", new Fields("eVector"));
+        //outputFieldsDeclarer.declareStream("Anomalies", new Fields("srcSubnet", "dstSubnet"));
     }
 
     @Override
@@ -150,5 +165,56 @@ public class DependencyMatrixBolt implements IRichBolt {
         Config conf = new Config();
         conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequency);
         return conf;
+    }
+
+    //Following code is based on http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
+
+    private DoubleMatrix getPrincipalEigenvector(DoubleMatrix matrix){
+        int maxIndex = getMaxIndex(matrix);
+        ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0];
+        return getEigenVector(eigenVectors, maxIndex);
+    }
+
+    private int getMaxIndex(DoubleMatrix matrix) {
+        ComplexDouble[] doubleMatrix = Eigen.eigenvalues(matrix).toArray();
+        int maxIndex = 0;
+        for (int i = 0; i < doubleMatrix.length; i++){
+            double newnumber = doubleMatrix[i].abs();
+            if ((newnumber > doubleMatrix[maxIndex].abs())){
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+
+    private DoubleMatrix getEigenVector(ComplexDoubleMatrix eigenvector, int columnId)
+    {
+        ComplexDoubleMatrix column = eigenvector.getColumn(columnId);
+        DoubleMatrix vector = new DoubleMatrix(eigenvector.rows);
+        int i = 0;
+        for(ComplexDouble value : column.toArray())
+        {
+            vector.put(i++, value.abs());
+        }
+        return vector;
+    }
+
+    private DoubleMatrix normalized(DoubleMatrix principalEigenvector)
+    {
+        double total = sum(principalEigenvector);
+        DoubleMatrix normalizedValues = new DoubleMatrix(principalEigenvector.rows);
+        int i = 0;
+        for (Double aDouble : principalEigenvector.toArray()) {
+            normalizedValues.put(i++, (aDouble / total));
+        }
+        return normalizedValues;
+    }
+
+    private double sum(DoubleMatrix principalEigenvector){
+        double total = 0;
+        for (Double aDouble : principalEigenvector.toArray()) {
+            total += aDouble;
+        }
+        return total;
     }
 }

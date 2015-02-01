@@ -1,9 +1,7 @@
 package storm.starter;
 
-import org.jblas.ComplexDouble;
-import org.jblas.ComplexDoubleMatrix;
-import org.jblas.DoubleMatrix;
-import org.jblas.Eigen;
+import org.jblas.*;
+import org.jblas.util.Functions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,13 +23,112 @@ public class Tester {
 
         //execute(arr);
 
-        findEigenvector();
+        DoubleMatrix eigenVector = findEigenvector();
+
+        //windowMatrixTester();
+
+        DoubleMatrix principalLeftSingularVector = svdTester();
+
+        System.out.println("This should equal 1?: " + eigenVector.transpose().mmul(principalLeftSingularVector).toString());
+
 
 
     }
 
-    private static void findEigenvector()
+    private static DoubleMatrix svdTester()
     {
+        double[][] d = new double[][]{
+                {3,1,1},
+                {-1,3,1},
+                {1,1,3}
+        };
+
+        DoubleMatrix mat = new DoubleMatrix(d);
+        DoubleMatrix[] svd = Singular.fullSVD(mat);
+
+        for(int i =0; i < svd.length; i++)
+        {
+            System.out.println("svd["+i+"]: "+svd[i]);
+        }
+
+        System.out.println("////");
+
+        DoubleMatrix singluarValues = Singular.SVDValues(mat);
+        System.out.println("singular Values: " + singluarValues);
+
+        int maxColVal = getMaxSingularValueColumnIndex(singluarValues);
+        DoubleMatrix principalLeftSingularVectorOfUt = svd[0].getColumn(maxColVal);
+
+        System.out.println("pLeftSingularVector: " + principalLeftSingularVectorOfUt);
+        return principalLeftSingularVectorOfUt;
+
+
+    }
+
+    private static int getMaxSingularValueColumnIndex(DoubleMatrix mat)
+    {
+        int maxIndex = 0;
+        double[] doubleMatrix = mat.toArray();
+        for (int i = 0; i < doubleMatrix.length; i++){
+            double newnumber = doubleMatrix[i];
+            if (newnumber > doubleMatrix[maxIndex]){
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+
+    private static void windowMatrixTester()
+    {
+        DoubleMatrix windowMatrix = null;
+        DoubleMatrix v1 = new DoubleMatrix(new double[] {1,2,3});
+        DoubleMatrix v2 = new DoubleMatrix(new double[] {4,5,6});
+        DoubleMatrix v3 = new DoubleMatrix(new double[] {7,8,9});
+        DoubleMatrix v4 = new DoubleMatrix(new double[] {10,11,12});
+        ArrayList<DoubleMatrix> vectorList = new ArrayList<DoubleMatrix>();
+        vectorList.add(v1);
+        vectorList.add(v2);
+        vectorList.add(v3);
+        vectorList.add(v4);
+
+        int windowSize = 3;
+
+        for(DoubleMatrix vector : vectorList) {
+
+            if (windowMatrix == null) {
+                windowMatrix = vector;
+            }
+            else
+            {
+                //window matrix not yet filled
+                if (windowMatrix.columns < windowSize) {
+                    windowMatrix = windowMatrix.concatHorizontally(windowMatrix, vector);
+                }
+                else
+                {
+                    DoubleMatrix newMatrix = windowMatrix.getColumn(1);
+                    for (int i = 2; i < windowSize; i++) {
+                        newMatrix = newMatrix.concatHorizontally(newMatrix, windowMatrix.getColumn(i));
+                    }
+                    newMatrix = newMatrix.concatHorizontally(newMatrix, vector);
+                    windowMatrix = newMatrix;
+
+                    System.out.println(windowMatrix);
+                }
+            }
+        }
+
+
+    }
+
+    private static DoubleMatrix findEigenvector()
+    {
+        double[][] d = new double[][]{
+                {3,-1,1},
+                {-1,3,1},
+                {1,1,3}
+        };
+
         double[][] dOne = new double[][]{
                 {-1,2,2},
                 {2,2,-1},
@@ -63,10 +160,22 @@ public class Tester {
         };
 
 
-        DoubleMatrix matrix = new DoubleMatrix(dThree);
-        DoubleMatrix matrix2 = new DoubleMatrix(dFive);
 
-        ComplexDoubleMatrix eigenvalues = Eigen.eigenvalues(matrix);
+        DoubleMatrix matrix3 = new DoubleMatrix(d);
+
+        DoubleMatrix vector2 = getPrincipalEigenvector2(matrix3);
+        System.out.println("normalisedPrincipalEigenvector2 = " + normalized(vector2));
+        System.out.println("normalisedPrincipalEigenvector2 rows = " + normalized(vector2).rows);
+        System.out.println("normalisedPrincipalEigenvector2 columns = " + normalized(vector2).columns);
+//        List<Double> vector = getPrincipalEigenvector(matrix3);
+//        System.out.println("normalisedPrincipalEigenvector = " + normalised(vector));
+        System.out.println();
+        return vector2;
+
+//        DoubleMatrix matrix = new DoubleMatrix(dThree);
+//        DoubleMatrix matrix2 = new DoubleMatrix(dFive);
+
+        /*ComplexDoubleMatrix eigenvalues = Eigen.eigenvalues(matrix);
         for (ComplexDouble eigenvalue : eigenvalues.toArray()) {
             System.out.print(String.format("%.2f ", eigenvalue.real()));
         }
@@ -88,15 +197,21 @@ public class Tester {
         List<Double> principalEigenvector2 = getPrincipalEigenvector(matrix2);
         System.out.println("principalEigenvector = " + principalEigenvector2);
 
-        System.out.println("normalisedPrincipalEigenvector = " + normalised(principalEigenvector2));
+        System.out.println("normalisedPrincipalEigenvector = " + normalised(principalEigenvector2));*/
 
     }
 
-    //Code from http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
+    //Mixture of code from and based on http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
     private static List<Double> getPrincipalEigenvector(DoubleMatrix matrix) {
         int maxIndex = getMaxIndex(matrix);
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0];
         return getEigenVector(eigenVectors, maxIndex);
+    }
+
+    private static DoubleMatrix getPrincipalEigenvector2(DoubleMatrix matrix){
+        int maxIndex = getMaxIndex(matrix);
+        ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0];
+        return getEigenVector2(eigenVectors, maxIndex);
     }
 
     private static int getMaxIndex(DoubleMatrix matrix) {
@@ -118,7 +233,32 @@ public class Tester {
         for (ComplexDouble value : column.toArray()) {
             values.add(value.abs()  );
         }
+
+//        System.out.println("vector: " + values);
+//        System.out.println("complexDouble vector: " + eigenvector.toString());
+//        System.out.println("/////");
+
+
         return values;
+    }
+
+    private static DoubleMatrix getEigenVector2(ComplexDoubleMatrix eigenvector, int columnId)
+    {
+        ComplexDoubleMatrix column = eigenvector.getColumn(columnId);
+        DoubleMatrix vector = new DoubleMatrix(eigenvector.rows);
+        int i = 0;
+
+        for(ComplexDouble value : column.toArray())
+        {
+            vector.put(i++, value.abs());
+        }
+
+//        System.out.println("vector2: " + vector);
+//        System.out.println("complexDouble vector2: " + eigenvector.toString());
+//        System.out.println("/////");
+
+
+        return vector;
     }
 
     private static List<Double> normalised(List<Double> principalEigenvector) {
@@ -130,9 +270,28 @@ public class Tester {
         return normalisedValues;
     }
 
+    private static DoubleMatrix normalized(DoubleMatrix principalEigenvector)
+    {
+        double total = sum2(principalEigenvector);
+        DoubleMatrix normalizedValues = new DoubleMatrix(principalEigenvector.rows);
+        int i = 0;
+        for (Double aDouble : principalEigenvector.toArray()) {
+            normalizedValues.put(i++, (aDouble / total));
+        }
+        return normalizedValues;
+    }
+
     private static double sum(List<Double> principalEigenvector) {
         double total = 0;
         for (Double aDouble : principalEigenvector) {
+            total += aDouble;
+        }
+        return total;
+    }
+
+    private static double sum2(DoubleMatrix principalEigenvector){
+        double total = 0;
+        for (Double aDouble : principalEigenvector.toArray()) {
             total += aDouble;
         }
         return total;
