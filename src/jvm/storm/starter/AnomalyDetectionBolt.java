@@ -38,19 +38,19 @@ public class AnomalyDetectionBolt implements IRichBolt {
     public void execute(Tuple tuple) {
     //Vectors are entering at tick speed defined in DependencyMatrixBolt so there is no need for it here.
 
-        DoubleMatrix vector = (DoubleMatrix) tuple.getValue(0);
+        DoubleMatrix inputVector = (DoubleMatrix) tuple.getValue(0);
 
         //initialize windowMatrix if null
         if(windowMatrix == null)
         {
-            windowMatrix = vector;
+            windowMatrix = inputVector;
         }
         else
         {
             if (windowMatrix.columns < windowSize)
             {
                 //append new vectors to windowMatrix
-                windowMatrix = windowMatrix.concatHorizontally(windowMatrix, vector);
+                windowMatrix = windowMatrix.concatHorizontally(windowMatrix, inputVector);
             }
             else
             {
@@ -60,13 +60,13 @@ public class AnomalyDetectionBolt implements IRichBolt {
                 {
                     newMatrix = newMatrix.concatHorizontally(newMatrix, windowMatrix.getColumn(i));
                 }
-                newMatrix = newMatrix.concatHorizontally(newMatrix, vector);
+                newMatrix = newMatrix.concatHorizontally(newMatrix, inputVector);
                 windowMatrix = newMatrix;
 
-                //do SVD
-                DoubleMatrix[] SVD = Singular.fullSVD(windowMatrix);
+               //get L2 normalized principal left singular vector
+                DoubleMatrix plsv = MatrixUtilities.getPLSV(windowMatrix);
 
-
+                //TODO anomaly detection stuff
             }
         }
 

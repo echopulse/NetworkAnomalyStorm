@@ -60,8 +60,8 @@ public class DependencyMatrixBolt implements IRichBolt {
                 //decay dependency matrix values
                 dependencyMatrix = dependencyMatrix.mul(1 - decayWeight);
 
-                //finding and emitting principal eigen vector
-                DoubleMatrix principalEigenvector = normalized(getPrincipalEigenvector(dependencyMatrix));
+                //gets L1-normalized principal eigenvector
+                DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
                 _collector.emit("EigenVector", new Values(principalEigenvector));
             }
             else
@@ -99,11 +99,6 @@ public class DependencyMatrixBolt implements IRichBolt {
                     dependencyMatrix.put(srcID, dstID, countVal);
                     dependencyMatrix.put(dstID, srcID, countVal);
                 }
-                else
-                {
-                    //TODO IPs not found -> emit as anomaly?
-                }
-
             }
         }
 
@@ -165,56 +160,5 @@ public class DependencyMatrixBolt implements IRichBolt {
         Config conf = new Config();
         conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequency);
         return conf;
-    }
-
-    //Following code is based on http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
-
-    private DoubleMatrix getPrincipalEigenvector(DoubleMatrix matrix){
-        int maxIndex = getMaxIndex(matrix);
-        ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0];
-        return getEigenVector(eigenVectors, maxIndex);
-    }
-
-    private int getMaxIndex(DoubleMatrix matrix) {
-        ComplexDouble[] doubleMatrix = Eigen.eigenvalues(matrix).toArray();
-        int maxIndex = 0;
-        for (int i = 0; i < doubleMatrix.length; i++){
-            double newnumber = doubleMatrix[i].abs();
-            if ((newnumber > doubleMatrix[maxIndex].abs())){
-                maxIndex = i;
-            }
-        }
-        return maxIndex;
-    }
-
-    private DoubleMatrix getEigenVector(ComplexDoubleMatrix eigenvector, int columnId)
-    {
-        ComplexDoubleMatrix column = eigenvector.getColumn(columnId);
-        DoubleMatrix vector = new DoubleMatrix(eigenvector.rows);
-        int i = 0;
-        for(ComplexDouble value : column.toArray())
-        {
-            vector.put(i++, value.abs());
-        }
-        return vector;
-    }
-
-    private DoubleMatrix normalized(DoubleMatrix principalEigenvector)
-    {
-        double total = sum(principalEigenvector);
-        DoubleMatrix normalizedValues = new DoubleMatrix(principalEigenvector.rows);
-        int i = 0;
-        for (Double aDouble : principalEigenvector.toArray()) {
-            normalizedValues.put(i++, (aDouble / total));
-        }
-        return normalizedValues;
-    }
-
-    private double sum(DoubleMatrix principalEigenvector){
-        double total = 0;
-        for (Double aDouble : principalEigenvector.toArray()) {
-            total += aDouble;
-        }
-        return total;
     }
 }

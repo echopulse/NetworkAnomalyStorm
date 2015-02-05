@@ -45,7 +45,7 @@ public class Tester {
 
 
         DoubleMatrix e1 = new DoubleMatrix(new double[] {2,0,1});
-        e1 = normalizedLevel2(e1);
+        e1 = normalizeLevel2(e1);
         System.out.println("normalized e1:"  + e1);
         DoubleMatrix e2 = findEigenvector(m2);
         DoubleMatrix e3 = findEigenvector(m3);
@@ -58,7 +58,7 @@ public class Tester {
 
         //principal left singular vector
         DoubleMatrix PLSV = svdTester(vectorMatrix);
-        PLSV = normalizedLevel2(PLSV);
+        PLSV = normalizeLevel2(PLSV);
         System.out.println("normalized plsv: " + PLSV);
         System.out.println("transpose(r(t-1)) x u(t): " + PLSV.transpose().mmul(e1).toString());
 
@@ -108,7 +108,7 @@ public class Tester {
     private static DoubleMatrix findEigenvector(DoubleMatrix matrix)
     {
         DoubleMatrix vector = getPrincipalEigenvector(matrix);
-        DoubleMatrix normVector = normalized(vector);
+        DoubleMatrix normVector = normalizeLevel1(vector);
         System.out.println("normalized principal eigenvector (sum of values = 1): " + normVector);
         System.out.println("has rows = " + normVector.rows);
         System.out.println("has columns = " + normVector.columns);
@@ -153,7 +153,7 @@ public class Tester {
     }
 
     //normalizes vectors into unit vectors
-    private static DoubleMatrix normalized(DoubleMatrix principalEigenvector)
+    private static DoubleMatrix normalizeLevel1(DoubleMatrix principalEigenvector)
     {
         double total = vectorSum(principalEigenvector);
         DoubleMatrix normalizedValues = new DoubleMatrix(principalEigenvector.rows);
@@ -164,7 +164,7 @@ public class Tester {
         return normalizedValues;
     }
 
-    private static DoubleMatrix normalizedLevel2(DoubleMatrix principalEigenvector)
+    private static DoubleMatrix normalizeLevel2(DoubleMatrix principalEigenvector)
     {
         double sum = 0;
         for (int i = 0; i < principalEigenvector.length; i++){
