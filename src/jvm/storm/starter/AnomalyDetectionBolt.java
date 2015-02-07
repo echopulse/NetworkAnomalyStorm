@@ -8,6 +8,7 @@ import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import org.jblas.DoubleMatrix;
 import org.jblas.Singular;
 
@@ -21,12 +22,10 @@ public class AnomalyDetectionBolt implements IRichBolt {
     OutputCollector _collector;
     DoubleMatrix windowMatrix = null;
     int windowSize = 3;
-    int tickFrequency = 0;
 
-    public AnomalyDetectionBolt(int newTickFrequency, int newWindowSize)
+    public AnomalyDetectionBolt(int newWindowSize)
     {
         windowSize = newWindowSize;
-        tickFrequency = newTickFrequency;
     }
 
     @Override
@@ -39,6 +38,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
     //Vectors are entering at tick speed defined in DependencyMatrixBolt so there is no need for it here.
 
         DoubleMatrix inputVector = (DoubleMatrix) tuple.getValue(0);
+        System.out.println("inputVector:" + inputVector);
 
         //initialize windowMatrix if null
         if(windowMatrix == null)
@@ -61,12 +61,20 @@ public class AnomalyDetectionBolt implements IRichBolt {
                     newMatrix = newMatrix.concatHorizontally(newMatrix, windowMatrix.getColumn(i));
                 }
                 newMatrix = newMatrix.concatHorizontally(newMatrix, inputVector);
-                windowMatrix = newMatrix;
+
 
                //get L2 normalized principal left singular vector
                 DoubleMatrix plsv = MatrixUtilities.getPLSV(windowMatrix);
 
+                windowMatrix = newMatrix;
+                //z(t) = 1 - r(t-1)^T x u(t)
+                //_collector.emit("plsv", new Values(plsv.transpose().mmul(inputVector).toString()));
+
+                System.out.println("z(t) = " + (1 - plsv.transpose().mmul(inputVector).get(0)));
+
+
                 //TODO anomaly detection stuff
+
             }
         }
 
@@ -81,7 +89,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        //outputFieldsDeclarer.declare(new Fields("fieldName"));
+        //outputFieldsDeclarer.declare(new Fields("plsv"));
 
         //multiple output
         //outputFieldsDeclarer.declareStream("stream1Name", new Fields("fieldName"));

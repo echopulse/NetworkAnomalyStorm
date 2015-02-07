@@ -62,10 +62,10 @@ public class SplitBolt implements IRichBolt
                     dstSubnet = dstSubnet.substring(0, dstSubnet.length() - 1);
 
 
-                    _collector.emit("Subnets", new Values(srcSubnet, dstSubnet));
+                    _collector.emit("SubnetStream", new Values(srcSubnet, dstSubnet));
                     _collector.emit("Ports", new Values(srcPort, dstPort));
                 } catch (ArrayIndexOutOfBoundsException ex) {
-                    _collector.emit("Subnets", new Values("ex", "ex"));
+                    _collector.emit("SubnetStream", new Values("ex", "ex"));
                     _collector.emit("Ports", new Values("ex", "ex"));
                 }
             }
@@ -80,7 +80,7 @@ public class SplitBolt implements IRichBolt
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("Subnets", new Fields("srcSubnet", "dstSubnet"));
+        declarer.declareStream("SubnetStream", new Fields("srcSubnet", "dstSubnet"));
         declarer.declareStream("Ports", new Fields("srcPort", "dstPort"));
     }
 

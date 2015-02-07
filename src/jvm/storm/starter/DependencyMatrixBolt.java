@@ -62,7 +62,8 @@ public class DependencyMatrixBolt implements IRichBolt {
 
                 //gets L1-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
-                _collector.emit("EigenVector", new Values(principalEigenvector));
+                System.out.println("DM: pEigen:" + principalEigenvector.toString());
+                _collector.emit("EigenStream", new Values(principalEigenvector));
             }
             else
             {
@@ -148,7 +149,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        outputFieldsDeclarer.declare(new Fields("eVector"));
+        outputFieldsDeclarer.declareStream("EigenStream", new Fields("eigenField"));
 
         //multiple output
         //outputFieldsDeclarer.declareStream("EigenVector", new Fields("eVector"));
