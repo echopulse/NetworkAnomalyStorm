@@ -37,7 +37,7 @@ public class NetworkTopology {
     //Graph
     //builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
     //DependencyMatrix
-    builder.setBolt("matrix", new DependencyMatrixBolt(1, 0, 5), 1).shuffleGrouping("split", "SubnetStream");
+    builder.setBolt("matrix", new DependencyMatrixBolt(1, 0, 5, 1), 1).shuffleGrouping("split", "SubnetStream");
     //Anomaly Detection Bolt
     builder.setBolt("anomaly", new AnomalyDetectionBolt(5), 1).shuffleGrouping("matrix", "EigenStream");
 

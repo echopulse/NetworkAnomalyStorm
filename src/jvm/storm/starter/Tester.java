@@ -1,8 +1,11 @@
 package storm.starter;
 
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
+import com.google.common.collect.TreeMultimap;
 import org.jblas.*;
 
-import java.util.ArrayList;
+import java.util.*;
 
 public class Tester {
 
@@ -21,7 +24,7 @@ public class Tester {
 
         execute(arr);*/
 
-        double[][] t1 = new double[][]{
+        /*double[][] t1 = new double[][]{
                 {3,-1,1},
                 {-1,3,1},
                 {1,1,3}
@@ -62,7 +65,117 @@ public class Tester {
         System.out.println("normalized plsv: " + PLSV);
         System.out.println("transpose(r(t-1)) x u(t): " + PLSV.transpose().mmul(e1).toString());
 
-        //windowMatrixTester();
+        //windowMatrixTester();*/
+
+        treeMapTest();
+
+    }
+
+    private static class ValueComparator implements Comparator<String> {
+
+        Map<String, Double> base;
+        public ValueComparator(Map<String, Double> base) {
+            this.base = base;
+        }
+
+        // Note: this comparator imposes orderings that are inconsistent with equals.
+        public int compare(String a, String b) {
+            if (base.get(a) >= base.get(b)) {
+                return -1;
+            } else {
+                return 1;
+            } // returning 0 would merge keys
+        }
+    }
+
+    private static void treeMapTest()
+    {
+        Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
+        IPtoIDMap.put("a", 0);
+        IPtoIDMap.put("b", 1);
+        IPtoIDMap.put("c", 2);
+        IPtoIDMap.put("d", 3);
+
+        Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
+        for (Map.Entry<String, Integer> entry : IPtoIDMap.entrySet()) {
+            IDtoIPMap.put(entry.getValue(), entry.getKey());
+        }
+
+        com.google.common.collect.Multiset<String> bag = com.google.common.collect.HashMultiset.create();
+        //bag.add("x");
+        //bag.add("y");
+        //bag.add("x");
+        bag.add("z");
+        bag.add("z");
+        bag.add("z");
+
+        //bag.remove("a", bag.count("a"));
+        Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(bag);
+
+        System.out.println(IPtoIDMap);
+        System.out.println(IDtoIPMap);
+        System.out.println(bag);
+
+        double[][] t3 = new double[][]{
+                {2,     0,      0.2,    0},
+                {0,     2,      0,      0.1},
+                {0.2,   0,      0.5,    0.2},
+                {0,     0.1,    0.2,    0.4}
+        };
+        DoubleMatrix mat = new DoubleMatrix(t3);
+        System.out.println(mat);
+
+       //sets column and row i to zeros if their sum is below a threshold
+        int replaceThreshold = 1;
+        Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
+
+        DoubleMatrix rowSums = mat.rowSums();
+        for(int i = 0; i < rowSums.getRows(); i++)
+        {
+            if(bagIterator.hasNext() && rowSums.get(i) < replaceThreshold)
+            {
+                //clear row and columns in dependency matrix
+                DoubleMatrix zeroVector = DoubleMatrix.zeros(rowSums.getRows());
+                mat.putRow(i, zeroVector);
+                mat.putColumn(i, zeroVector);
+
+                //remap index to new IP
+                IPtoIDMap.remove(IDtoIPMap.remove(i));
+
+                //get highest counted not included
+                String candidate = bagIterator.next().getElement();
+                bag.remove(candidate, bag.count(candidate));
+
+                //replace values in IPtoIDMap and IDtoIPMap
+                IPtoIDMap.put(candidate, i);
+                IDtoIPMap.put(i, candidate);
+
+            }
+        }
+
+        System.out.println("END");
+        System.out.println(IPtoIDMap);
+        System.out.println(IDtoIPMap);
+        System.out.println(bag);
+        System.out.println(mat);
+
+
+
+       // ValueComparator bvc =  new ValueComparator(map);
+
+        /*Iterable<Multiset.Entry<String>> entriesSortedByCount = Multisets.copyHighestCountFirst(bag).entrySet();
+        Iterator iterator = entriesSortedByCount.iterator();
+        int i = 0;
+        while(iterator.hasNext() && i < 10)
+        {
+            i++;
+            Multiset.Entry<String> entry = (Multiset.Entry<String>)iterator.next();
+            System.out.println(entry.getElement() + " count: " + entry.getCount());
+        }*/
+
+
+
+
 
     }
 
