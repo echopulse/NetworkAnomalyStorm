@@ -17,6 +17,7 @@ try:
         print 'Got connection from', addr
         payload = []
         currtime = 0
+        timeVar = 0
         delay = 0
         with open('/home/fil/Desktop/Python Server/timestampedDumps/dumpcsv-timestamped.20141103', 'r') as dump:
             for line in dump:
@@ -31,7 +32,8 @@ try:
                 #wait then resume
                 else:
                     delay = timestamp - currtime
-                    print "delay: " + str(delay)
+                    timeVar = timeVar + delay
+                    print "delay: " + str(delay) + ", total seconds:" + str(timeVar)
                     time.sleep(delay)
                     currtime = timestamp
                     conn.send(line)

@@ -27,14 +27,14 @@ public class DependencyMatrixBolt implements IRichBolt {
     private int tickCount = 0;
     private int trainingTime = 0;
     private int lastMapValue = 0;
-    private int replaceThreshold = 0;
+    private double replaceThreshold = 0;
     private Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
     private Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
     private DoubleMatrix dependencyMatrix;
     private Multiset<String> candidateBag = HashMultiset.create();
 
 
-    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, int newReplaceThreshold)
+    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold)
     {
         tickFrequency = newTickFrequency;
         decayWeight = newDecayVar;
@@ -60,15 +60,18 @@ public class DependencyMatrixBolt implements IRichBolt {
         {
             if(tickCount > trainingTime)
             {
-                //decay dependency matrix values
-                dependencyMatrix = dependencyMatrix.mul(1 - decayWeight);
-
                 //replace decayed ips, threshold is sum of IPs respective row/column in the dependency matrix
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
 
-                //gets L1-normalized principal eigenvector
+                //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
+
+                //gets L2-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
-                System.out.println("DM: pEigen:" + principalEigenvector.toString());
+                //System.out.println("DM: pEigen:" + principalEigenvector.toString());
+
+                //decay dependency matrix values
+                dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
+
                 _collector.emit("EigenStream", new Values(principalEigenvector));
             }
             else
@@ -102,7 +105,6 @@ public class DependencyMatrixBolt implements IRichBolt {
                 //if id's are already in the matrix, increase the relative count
                 if(srcID != null && dstID != null) {
 
-                    //TODO consider using ln to normalize values
                     double countVal = dependencyMatrix.get(srcID, dstID);
                     countVal++;
                     dependencyMatrix.put(srcID, dstID, countVal);
@@ -154,7 +156,7 @@ public class DependencyMatrixBolt implements IRichBolt {
         }
     }
 
-    private void replaceDecayedIPs(int replaceThreshold)
+    private void replaceDecayedIPs(double replaceThreshold)
     {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();

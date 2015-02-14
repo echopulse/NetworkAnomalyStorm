@@ -2,7 +2,8 @@ package storm.starter;
 
 import org.jblas.*;
 
-import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Created by fil on 05/02/15.
@@ -40,11 +41,11 @@ public final class MatrixUtilities {
 
     //Code based on: http://www.markhneedham.com/blog/2013/08/05/javajblas-calculating-eigenvector-centrality-of-an-adjacency-matrix/
 
-    //returns normalized (L1) principal eigenvector
+    //returns normalized (L2) principal eigenvector
     public static DoubleMatrix getPrincipalEigenvector(DoubleMatrix matrix){
         int maxIndex = getMaxEigenValueIndex(matrix);
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvectors(matrix)[0]; //eigenvectors stored as columns in the matrix
-        return normalizeLevel1(getEigenVector(eigenVectors, maxIndex));
+        return normalizeLevel2(getEigenVector(eigenVectors, maxIndex));
     }
 
     //returns column index corresponding to max eigenvalue
@@ -111,6 +112,25 @@ public final class MatrixUtilities {
             total += aDouble;
         }
         return total;
+    }
+
+    //returns matrix with ln values if > 1
+    public static DoubleMatrix naturalLogMatrix(DoubleMatrix mat)
+    {
+        for (int i = 0; i < mat.length; i++){
+            if(mat.get(i) > 1)
+                mat.put(i, Math.log(mat.get(i)));
+        }
+        return mat;
+    }
+
+    //rounds a double to n places
+    public static double roundDouble(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        BigDecimal bd = new BigDecimal(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 
 }

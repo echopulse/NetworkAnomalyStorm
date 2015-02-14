@@ -3,11 +3,19 @@ package storm.starter;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multisets;
 import com.google.common.collect.TreeMultimap;
+import org.apache.commons.math3.distribution.GammaDistribution;
 import org.jblas.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 public class Tester {
+
+
+    private static double firstMoment = 0.25;
+    private static double secondMoment = 0.175;
+
 
     public static void main(String[] args)
     {
@@ -67,26 +75,72 @@ public class Tester {
 
         //windowMatrixTester();*/
 
-        treeMapTest();
+        //treeMapTest();
+        int count = 0;
+        int anomalyCount = 0;
+        int notAnomalyCount = 0;
+
+        for(int i = 0; i < 1000; i++) {
+            //System.out.println(i);
+            if(anomalyDetectionTest(0.05, 5, 1, firstMoment, secondMoment, 0.01))
+                anomalyCount++;
+            else
+                notAnomalyCount++;
+        }
+        System.out.println("anomalies: " + anomalyCount);
+        System.out.println("not anomalies: " + notAnomalyCount);
 
     }
 
-    private static class ValueComparator implements Comparator<String> {
+    public static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
 
-        Map<String, Double> base;
-        public ValueComparator(Map<String, Double> base) {
-            this.base = base;
-        }
-
-        // Note: this comparator imposes orderings that are inconsistent with equals.
-        public int compare(String a, String b) {
-            if (base.get(a) >= base.get(b)) {
-                return -1;
-            } else {
-                return 1;
-            } // returning 0 would merge keys
-        }
+        BigDecimal bd = new BigDecimal(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
+
+    private static boolean anomalyDetectionTest(double pc, int windowSize, double deltaTime, double oldFirstMoment, double oldSecondMoment, double dissimilarity)
+    {
+        double beta = deltaTime / windowSize;
+        //double beta = 1;
+        double newFirstMoment = ((1 - beta)*oldFirstMoment) + (beta*dissimilarity);
+        double newSecondMoment = ((1 - beta)*oldSecondMoment) + (beta*Math.pow(dissimilarity, 2));
+        double nMinusOne = (2 * Math.pow(newFirstMoment, 2)) / (newSecondMoment - Math.pow(newFirstMoment, 2));
+        double sigma = round((newSecondMoment - Math.pow(newFirstMoment, 2))/(2*newFirstMoment), 5);
+
+
+        double shape = round(nMinusOne / 2, 5);
+        double scale = round(2 * sigma, 5);
+
+        GammaDistribution gamma = new GammaDistribution(shape, scale);
+
+        double zth = gamma.inverseCumulativeProbability(pc);
+        boolean test = (pc == gamma.cumulativeProbability(0, zth));
+
+
+        firstMoment = round(newFirstMoment, 5);
+        secondMoment = round(newSecondMoment, 5);
+
+        /*System.out.println("beta: " + beta);
+        System.out.println("newFirstMoment: " + newFirstMoment);
+        System.out.println("newSecondMoment: " + newSecondMoment);
+        System.out.println("nMinusOne: " + nMinusOne);
+        System.out.println("sigma: " + sigma);
+        System.out.println("shape: " + shape);
+        System.out.println("scale: " + scale);
+        System.out.println("zth: " + zth);
+        System.out.println("pc: " + pc + ", " + round(gamma.cumulativeProbability(0, zth), 5));
+        System.out.println("difference: " + (dissimilarity - zth));
+        System.out.println();*/
+
+        System.out.println(beta + ", " + newFirstMoment + ", " + newSecondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + zth + ", " + (dissimilarity - zth));
+        return (dissimilarity > zth);
+
+        //System.out.println((dissimilarity > zth)? "anomaly" : "not anomaly");*/
+
+    }
+
 
     private static void treeMapTest()
     {
@@ -124,6 +178,14 @@ public class Tester {
         };
         DoubleMatrix mat = new DoubleMatrix(t3);
         System.out.println(mat);
+
+        for (int i = 0; i < mat.length; i++){
+            if(mat.get(i) > 1)
+                mat.put(i, (double) Math.log(mat.get(i)));
+        }
+
+        System.out.println(mat);
+
 
        //sets column and row i to zeros if their sum is below a threshold
         int replaceThreshold = 1;

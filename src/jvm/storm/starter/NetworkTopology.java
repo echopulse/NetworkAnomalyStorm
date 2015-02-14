@@ -5,7 +5,6 @@ import backtype.storm.LocalCluster;
 import backtype.storm.StormSubmitter;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
-import backtype.storm.tuple.Fields;
 
 
 public class NetworkTopology {
@@ -24,6 +23,18 @@ public class NetworkTopology {
             number of columns in the matrix composed of eigenvectors
     */
 
+        //Shared Parameters
+        int tickFrequency = 1; //seconds
+
+        //DependencyMatrixBolt
+        double decay = 1;               //0-1, 0 = no decay, 1 = complete substitution of matrix at each tick
+        int trainingTime = 5;           //multiples of tickFrequency
+        double replaceThreshold = 0;    //suggest: decay ^ windowSize
+
+        //AnomalyDetectionBolt
+        int windowSize = 10;
+        double cumulativeProbabilityThreshold = 0.005;
+
 
 
     TopologyBuilder builder = new TopologyBuilder();
@@ -37,9 +48,9 @@ public class NetworkTopology {
     //Graph
     //builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
     //DependencyMatrix
-    builder.setBolt("matrix", new DependencyMatrixBolt(1, 0, 5, 1), 1).shuffleGrouping("split", "SubnetStream");
+    builder.setBolt("matrix", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold), 1).shuffleGrouping("split", "SubnetStream");
     //Anomaly Detection Bolt
-    builder.setBolt("anomaly", new AnomalyDetectionBolt(5), 1).shuffleGrouping("matrix", "EigenStream");
+    builder.setBolt("anomaly", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix", "EigenStream");
 
     //Printers
     //builder.setBolt("printzt", new PrinterBolt(), 1).shuffleGrouping("anomaly");
@@ -63,7 +74,7 @@ public class NetworkTopology {
 
       LocalCluster cluster = new LocalCluster();
       cluster.submitTopology("word-count", conf, topology);
-      Thread.sleep(30000);
+      Thread.sleep(6000000);
       //cluster.killTopology("word-count");
       cluster.shutdown();
 
