@@ -133,4 +133,14 @@ public final class MatrixUtilities {
         return bd.doubleValue();
     }
 
+    //sets all values in matrix diagonal to value
+    public static DoubleMatrix setDiagonal(DoubleMatrix matrix, double value)
+    {
+        for(int i = 0; i < matrix.rows; i++)
+        {
+            matrix.put(i,i,value);
+        }
+        return matrix;
+    }
+
 }

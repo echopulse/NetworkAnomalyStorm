@@ -41,36 +41,78 @@ public class SplitBolt implements IRichBolt
 
         //clears empty cases
         if(srcIP.length() > 1 && dstIP.length() > 1) {
-            //extract subnet
-            String[] srcBytes = srcIP.split("\\.");
-            String[] dstBytes = dstIP.split("\\.");
+            //extract octets
+            String[] srcOctets = srcIP.split("\\.");
+            String[] dstOctets = dstIP.split("\\.");
 
 
             String srcSubnet = "";
             String dstSubnet = "";
 
             //clears IPv6 cases
-            if (srcBytes.length > 1 && dstBytes.length > 1) {
-                try {
-                    int octets = 3;
-                    for (int i = 0; i < octets; i++) {
-                        srcSubnet += srcBytes[i] + ".";
-                        dstSubnet += dstBytes[i] + ".";
+            if (srcOctets.length > 1 && dstOctets.length > 1) {
 
-                    }
-                    srcSubnet = srcSubnet.substring(0, srcSubnet.length() - 1);
-                    dstSubnet = dstSubnet.substring(0, dstSubnet.length() - 1);
-
-
-                    _collector.emit("SubnetStream", new Values(srcSubnet, dstSubnet));
-                    _collector.emit("Ports", new Values(srcPort, dstPort));
-                } catch (ArrayIndexOutOfBoundsException ex) {
-                    _collector.emit("SubnetStream", new Values("ex", "ex"));
-                    _collector.emit("Ports", new Values("ex", "ex"));
+                if(isHadoopService(srcPort) || isHadoopService(dstPort))
+                {
+                    String srcService = srcIP + ":" + srcPort;
+                    String dstService = dstIP + ":" + dstPort;
+                    _collector.emit("ServiceStream", new Values(srcService, dstService));
                 }
+
+
+                int octets = 3;
+                String[] subnets = getSubnets(srcOctets, dstOctets, octets);
+                srcSubnet = subnets[0];
+                dstSubnet = subnets[1];
+
+
+                _collector.emit("SubnetStream", new Values(srcSubnet, dstSubnet));
+                _collector.emit("Ports", new Values(srcPort, dstPort));
             }
         }
 
+    }
+
+    private String[] getSubnets(String[] srcBytes, String[] dstBytes, int octets)
+    {
+        String srcSubnet = "";
+        String dstSubnet = "";
+
+        for (int i = 0; i < octets; i++) {
+            srcSubnet += srcBytes[i] + ".";
+            dstSubnet += dstBytes[i] + ".";
+        }
+        srcSubnet = srcSubnet.substring(0, srcSubnet.length() - 1);
+        dstSubnet = dstSubnet.substring(0, dstSubnet.length() - 1);
+
+        return new String[] {srcSubnet, dstSubnet};
+    }
+
+    private boolean isHadoopService(String port)
+    {
+        int[] hadoopPorts = {
+                1024,   //EECSBackup
+                50010,  //HadoopDataXceiver
+                50075,  //HadoopDNWeb
+                54310,  //HadoopHDFS
+                50070,  //HadoopNNWeb
+                50090,  //HadoopNN2Web
+                8485,   //HadoopJournalNode
+                50105,  //HadoopCheckpoint
+                8021,   //HadoopMRJobTracker
+                50030,  //HadoopMRJobTrackerWeb
+                8030, 8031, 8032, 8033, //HadoopYARNResourceManager
+                8088,   //HadoopYARNResourceManagerWeb
+                8040,   //er
+                10020, 19888, //HadoopMRJobHistory
+                2181    //HadoopZookeeper
+        };
+
+        for (int hadoopPort : hadoopPorts) {
+            if (Integer.parseInt(port) == hadoopPort)
+                return true;
+        }
+        return false;
     }
 
     @Override
@@ -82,6 +124,7 @@ public class SplitBolt implements IRichBolt
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream("SubnetStream", new Fields("srcSubnet", "dstSubnet"));
         declarer.declareStream("Ports", new Fields("srcPort", "dstPort"));
+        declarer.declareStream("ServiceStream", new Fields("srcService", "dstService"));
     }
 
     @Override

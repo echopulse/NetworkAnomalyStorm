@@ -4,7 +4,9 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import org.apache.commons.math3.distribution.GammaDistribution;
 import org.jblas.DoubleMatrix;
 
@@ -84,29 +86,31 @@ public class AnomalyDetectionBolt implements IRichBolt {
 
     private void detectAnomaly(double pc, int windowSize, double deltaTime, double oldFirstMoment, double oldSecondMoment, double dissimilarity)
     {
-        double beta = deltaTime / windowSize;
+        double beta = deltaTime / (windowSize * deltaTime);
         double firstMoment = ((1 - beta) * oldFirstMoment) + (beta*dissimilarity);
         double secondMoment = ((1 - beta) * oldSecondMoment) + (beta*Math.pow(dissimilarity, 2));
         double nMinusOne = (2 * Math.pow(firstMoment, 2)) / (secondMoment - Math.pow(firstMoment, 2));
-        double sigma = (secondMoment - Math.pow(firstMoment, 2))/(2*firstMoment);
+        //double sigma = (secondMoment - Math.pow(firstMoment, 2))/(2*firstMoment);
 
-        double scale = 2 * sigma;
-        double shape = nMinusOne / 2;
+        //double scale = 2 * sigma;
+        //double shape = nMinusOne / 2;
 
-        GammaDistribution gamma = new GammaDistribution(shape, scale);
+        //GammaDistribution gamma = new GammaDistribution(shape, scale);
         org.apache.commons.math3.distribution.ChiSquaredDistribution chi = new org.apache.commons.math3.distribution.ChiSquaredDistribution(nMinusOne);
 
         double chizth = chi.inverseCumulativeProbability(pc);
-        double zth = gamma.inverseCumulativeProbability(pc);
+        //double zth = gamma.inverseCumulativeProbability(pc);
 
-        boolean isAnomaly = dissimilarity > zth;
-        boolean isChi = dissimilarity > chizth;
+        //boolean isGammaAnomaly = dissimilarity > zth;
+        boolean isChiAnomaly = dissimilarity > chizth;
 
-        //System.out.println(beta + ", " + firstMoment + ", " + secondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + dissimilarity + ", " + zth + ", " + (dissimilarity - zth) + ", " + isAnomaly);
-        System.out.println(dissimilarity + ", " + zth + ", " + chizth + ", " + isAnomaly + ", " + isChi + ", " + nMinusOne);
+        //System.out.println(beta + ", " + firstMoment + ", " + secondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + dissimilarity + ", " + zth + ", " + (dissimilarity - zth) + ", " + isGammaAnomaly + ", " + chizth + ", " + isChiAnomaly);
+        //System.out.println(dissimilarity + ", " + zth + ", " + chizth + ", " + isGammaAnomaly + ", " + isChiAnomaly + ", " + nMinusOne);
 
         this.firstMoment = firstMoment;
         this.secondMoment = secondMoment;
+
+        _collector.emit("AnomaliesStream", new Values(dissimilarity, chizth, isChiAnomaly));
 
     }
 
@@ -118,7 +122,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        //outputFieldsDeclarer.declare(new Fields("plsv"));
+        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "chizth", "isAnomaly"));
 
         //multiple output
         //outputFieldsDeclarer.declareStream("stream1Name", new Fields("fieldName"));

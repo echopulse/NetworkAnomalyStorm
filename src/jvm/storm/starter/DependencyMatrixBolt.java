@@ -27,6 +27,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     private int tickCount = 0;
     private int trainingTime = 0;
     private int lastMapValue = 0;
+    private int minCountDuringTraining = 0;
     private double replaceThreshold = 0;
     private Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
     private Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
@@ -34,12 +35,13 @@ public class DependencyMatrixBolt implements IRichBolt {
     private Multiset<String> candidateBag = HashMultiset.create();
 
 
-    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold)
+    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newMinCountDuringTraining)
     {
         tickFrequency = newTickFrequency;
         decayWeight = newDecayVar;
         trainingTime = newTrainingTime;
         replaceThreshold = newReplaceThreshold;
+        minCountDuringTraining = newMinCountDuringTraining;
     }
 
     private boolean isTickTuple(Tuple tuple){
@@ -64,6 +66,9 @@ public class DependencyMatrixBolt implements IRichBolt {
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
 
                 //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
+                //dependencyMatrix.print();
+
+                dependencyMatrix = MatrixUtilities.setDiagonal(dependencyMatrix, 0.0);
 
                 //gets L2-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
@@ -87,14 +92,25 @@ public class DependencyMatrixBolt implements IRichBolt {
             //maps' dimensions grow
             if(tickCount <= trainingTime)
             {
-                incrementMaps(srcIP, dstIP);
+                if(minCountDuringTraining > 0)
+                {
+                    incrementBags(srcIP, dstIP);
+                }
+                else
+                {
+                    incrementMaps(srcIP, dstIP);
+                }
             }
             //map dimensions do not grow, matrix is built, values are updated
             else
             {
                 if(dependencyMatrix == null)
                 {
-                    //builds matrix filled with 0s
+                    if(minCountDuringTraining > 0)
+                    {
+                        setThresholdedMapValues(minCountDuringTraining);
+                    }
+
                     dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue).fill(0);
                 }
 
@@ -154,6 +170,37 @@ public class DependencyMatrixBolt implements IRichBolt {
                 lastMapValue++;
             }
         }
+    }
+
+    private void incrementBags(String srcIP, String dstIP)
+    {
+        candidateBag.add(srcIP);
+        candidateBag.add(dstIP);
+    }
+
+    //sets matrix creation variable to account for top counted tuples in training
+    private void setThresholdedMapValues(int threshold)
+    {
+        Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
+        Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
+
+        int i = 0;
+        while(bagIterator.hasNext())
+        {
+            Multiset.Entry<String> entry = bagIterator.next();
+            if(entry.getCount() >= threshold)
+            {
+                String candidate =  entry.getElement();
+                System.out.println(candidate + ": " + entry.getCount());
+                IPtoIDMap.put(candidate, i);
+                IDtoIPMap.put(i, candidate);
+                i++;
+            }
+        }
+
+        lastMapValue = IPtoIDMap.size();
+        candidateBag.clear();
+
     }
 
     private void replaceDecayedIPs(double replaceThreshold)
