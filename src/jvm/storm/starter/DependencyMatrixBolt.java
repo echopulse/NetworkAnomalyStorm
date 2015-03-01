@@ -27,7 +27,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     private int tickCount = 0;
     private int trainingTime = 0;
     private int lastMapValue = 0;
-    private int minCountDuringTraining = 0;
+    private int trainingThreshold = 0;
     private double replaceThreshold = 0;
     private Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
     private Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
@@ -35,13 +35,13 @@ public class DependencyMatrixBolt implements IRichBolt {
     private Multiset<String> candidateBag = HashMultiset.create();
 
 
-    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newMinCountDuringTraining)
+    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newTrainingThreshold)
     {
         tickFrequency = newTickFrequency;
         decayWeight = newDecayVar;
         trainingTime = newTrainingTime;
         replaceThreshold = newReplaceThreshold;
-        minCountDuringTraining = newMinCountDuringTraining;
+        trainingThreshold = newTrainingThreshold;
     }
 
     private boolean isTickTuple(Tuple tuple){
@@ -60,22 +60,19 @@ public class DependencyMatrixBolt implements IRichBolt {
 
         if(isTickTuple(tuple))
         {
+            //Matrix Review, Value Decay and Eigenvector calculation Phase
             if(tickCount > trainingTime)
             {
-                //replace decayed ips, threshold is sum of IPs respective row/column in the dependency matrix
-                if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
-
-                //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
-                //dependencyMatrix.print();
-
                 dependencyMatrix = MatrixUtilities.setDiagonal(dependencyMatrix, 0.0);
 
                 //gets L2-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
-                //System.out.println("DM: pEigen:" + principalEigenvector.toString());
 
                 //decay dependency matrix values
                 dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
+
+                //replace decayed services, threshold is sum of service respective row/column in the dependency matrix
+                if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
 
                 _collector.emit("EigenStream", new Values(principalEigenvector));
             }
@@ -89,10 +86,10 @@ public class DependencyMatrixBolt implements IRichBolt {
             String srcIP = tuple.getString(0);
             String dstIP = tuple.getString(1);
 
-            //maps' dimensions grow
+            //Training Phase
             if(tickCount <= trainingTime)
             {
-                if(minCountDuringTraining > 0)
+                if(trainingThreshold > 0)
                 {
                     incrementBags(srcIP, dstIP);
                 }
@@ -101,47 +98,53 @@ public class DependencyMatrixBolt implements IRichBolt {
                     incrementMaps(srcIP, dstIP);
                 }
             }
-            //map dimensions do not grow, matrix is built, values are updated
+            //Matrix Update Phase
             else
             {
                 if(dependencyMatrix == null)
                 {
-                    if(minCountDuringTraining > 0)
+                    if(trainingThreshold > 0)
                     {
-                        setThresholdedMapValues(minCountDuringTraining);
+                        useSortedMapValues(trainingThreshold);
                     }
 
                     dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue).fill(0);
                 }
 
-                //update values inside dependency matrix where they exist
-                Integer srcID = IPtoIDMap.get(srcIP);
-                Integer dstID = IPtoIDMap.get(dstIP);
-
-                //if id's are already in the matrix, increase the relative count
-                if(srcID != null && dstID != null) {
-
-                    double countVal = dependencyMatrix.get(srcID, dstID);
-                    countVal++;
-                    dependencyMatrix.put(srcID, dstID, countVal);
-                    dependencyMatrix.put(dstID, srcID, countVal);
-                }
-                //if IPs are not in the matrix, add them to the multiset bag of candidates
-                else
-                {
-                    //candidateBag size set to not exceed 20% of dependency matrix size
-                    if(candidateBag.size() < (int)(dependencyMatrix.rows * 0.2))
-                    {
-                        if(srcID == null)
-                            candidateBag.add(srcIP);
-                        if(dstID == null)
-                            candidateBag.add(dstIP);
-                    }
-                }
+                incrementValues(srcIP, dstIP);
             }
         }
 
         _collector.ack(tuple);
+    }
+
+    //Increments values inside dependency matrix where they exist
+    private void incrementValues(String srcIP, String dstIP)
+    {
+
+        Integer srcID = IPtoIDMap.get(srcIP);
+        Integer dstID = IPtoIDMap.get(dstIP);
+
+        //if id's are already in the matrix, increase the relative count
+        if(srcID != null && dstID != null) {
+
+            double countVal = dependencyMatrix.get(srcID, dstID);
+            countVal++;
+            dependencyMatrix.put(srcID, dstID, countVal);
+            dependencyMatrix.put(dstID, srcID, countVal);
+        }
+        //if IPs are not in the matrix, add them to the multiset bag of candidates
+        else
+        {
+            //candidateBag size set to not exceed 20% of dependency matrix size
+            if(candidateBag.size() < (int)(dependencyMatrix.rows * 0.2))
+            {
+                if(srcID == null)
+                    candidateBag.add(srcIP);
+                if(dstID == null)
+                    candidateBag.add(dstIP);
+            }
+        }
     }
 
     //Assigns IPs a unique int value in the IPtoIDMap HashMap for later use in the dependency matrix
@@ -178,8 +181,8 @@ public class DependencyMatrixBolt implements IRichBolt {
         candidateBag.add(dstIP);
     }
 
-    //sets matrix creation variable to account for top counted tuples in training
-    private void setThresholdedMapValues(int threshold)
+    //sets dependency matrix creation variables to account for top counted tuples in training
+    private void useSortedMapValues(int threshold)
     {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();

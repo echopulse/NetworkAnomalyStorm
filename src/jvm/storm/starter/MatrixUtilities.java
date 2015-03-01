@@ -114,12 +114,11 @@ public final class MatrixUtilities {
         return total;
     }
 
-    //returns matrix with ln values if > 1
+    //returns matrix with values ln(i+1)
     public static DoubleMatrix naturalLogMatrix(DoubleMatrix mat)
     {
         for (int i = 0; i < mat.length; i++){
-            if(mat.get(i) > 1)
-                mat.put(i, Math.log(mat.get(i)));
+            mat.put(i, Math.log(mat.get(i) + 1));
         }
         return mat;
     }

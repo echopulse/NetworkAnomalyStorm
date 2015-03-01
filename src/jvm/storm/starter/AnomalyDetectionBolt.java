@@ -98,19 +98,19 @@ public class AnomalyDetectionBolt implements IRichBolt {
         //GammaDistribution gamma = new GammaDistribution(shape, scale);
         org.apache.commons.math3.distribution.ChiSquaredDistribution chi = new org.apache.commons.math3.distribution.ChiSquaredDistribution(nMinusOne);
 
-        double chizth = chi.inverseCumulativeProbability(pc);
+        double anomalyThreshold = chi.inverseCumulativeProbability(pc);
         //double zth = gamma.inverseCumulativeProbability(pc);
 
         //boolean isGammaAnomaly = dissimilarity > zth;
-        boolean isChiAnomaly = dissimilarity > chizth;
+        boolean isChiAnomaly = dissimilarity > anomalyThreshold;
 
-        //System.out.println(beta + ", " + firstMoment + ", " + secondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + dissimilarity + ", " + zth + ", " + (dissimilarity - zth) + ", " + isGammaAnomaly + ", " + chizth + ", " + isChiAnomaly);
-        //System.out.println(dissimilarity + ", " + zth + ", " + chizth + ", " + isGammaAnomaly + ", " + isChiAnomaly + ", " + nMinusOne);
+        //System.out.println(beta + ", " + firstMoment + ", " + secondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + dissimilarity + ", " + zth + ", " + (dissimilarity - zth) + ", " + isGammaAnomaly + ", " + anomalyThreshold + ", " + isChiAnomaly);
+        System.out.println(dissimilarity + ", " + anomalyThreshold + ", " + isChiAnomaly + ", " + nMinusOne);
 
         this.firstMoment = firstMoment;
         this.secondMoment = secondMoment;
 
-        _collector.emit("AnomaliesStream", new Values(dissimilarity, chizth, isChiAnomaly));
+        _collector.emit("AnomaliesStream", new Values(dissimilarity, anomalyThreshold, isChiAnomaly));
 
     }
 
@@ -122,7 +122,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "chizth", "isAnomaly"));
+        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "threshold", "isAnomaly"));
 
         //multiple output
         //outputFieldsDeclarer.declareStream("stream1Name", new Fields("fieldName"));

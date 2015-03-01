@@ -37,17 +37,17 @@ public class PrinterBolt extends BaseRichBolt {
         }
 
         //CSV header
-        writer.println("Timestamp,Dissimilarity,Chi-th,Anomaly");
+        writer.println("Timestamp,Dissimilarity,Threshold,Anomaly");
     }
     @Override
     public void execute(Tuple tuple) {
         Date date = new Date();
         String dissimilarity = tuple.getDouble(0).toString();
-        String chith = tuple.getDouble(1).toString();
+        String threshold = tuple.getDouble(1).toString();
         String anomaly = tuple.getBoolean(2).toString();
 
-        System.out.println(dateFormat.format(date) + "," +dissimilarity + "," +chith+ ","+anomaly);
-        writer.println(dateFormat.format(date) + "," + dissimilarity + "," +chith+ ","+anomaly);
+        //System.out.println(dateFormat.format(date) + "," + dissimilarity + "," + threshold + ","+anomaly);
+        writer.println(dateFormat.format(date) + "," + dissimilarity + "," +threshold+ ","+anomaly);
         writer.flush();
 
         _collector.ack(tuple);

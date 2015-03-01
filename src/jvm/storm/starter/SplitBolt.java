@@ -91,7 +91,7 @@ public class SplitBolt implements IRichBolt
     private boolean isHadoopService(String port)
     {
         int[] hadoopPorts = {
-                1024,   //EECSBackup
+                //1024,   //EECSBackup
                 50010,  //HadoopDataXceiver
                 50075,  //HadoopDNWeb
                 54310,  //HadoopHDFS
@@ -103,7 +103,7 @@ public class SplitBolt implements IRichBolt
                 50030,  //HadoopMRJobTrackerWeb
                 8030, 8031, 8032, 8033, //HadoopYARNResourceManager
                 8088,   //HadoopYARNResourceManagerWeb
-                8040,   //er
+                8040, 8041, 8042,   //HadoopNodeManager
                 10020, 19888, //HadoopMRJobHistory
                 2181    //HadoopZookeeper
         };
