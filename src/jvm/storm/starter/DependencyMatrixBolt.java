@@ -188,13 +188,14 @@ public class DependencyMatrixBolt implements IRichBolt {
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
 
         int i = 0;
+        System.out.println("---");
         while(bagIterator.hasNext())
         {
             Multiset.Entry<String> entry = bagIterator.next();
             if(entry.getCount() >= threshold)
             {
                 String candidate =  entry.getElement();
-                System.out.println(candidate + ": " + entry.getCount());
+                System.out.println(candidate + "-> " + entry.getCount());
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
                 i++;
@@ -229,12 +230,16 @@ public class DependencyMatrixBolt implements IRichBolt {
                 String candidate = bagIterator.next().getElement();
                 candidateBag.remove(candidate, candidateBag.count(candidate));
 
+                System.out.println(candidate + " replaces row " + i + " with count:" + rowSums.get(i));
+
                 //replace values in IPtoIDMap and IDtoIPMap
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
 
             }
         }
+
+        candidateBag.clear();
     }
 
     @Override

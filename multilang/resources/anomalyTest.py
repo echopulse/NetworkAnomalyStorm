@@ -29,7 +29,7 @@ try:
             with open(path, 'r') as dump:
                 for line in dump:
                     conn.send(line)
-            print "total seconds:" + str(timeVar) + "    " + path
+            print "total seconds:" + str(timeVar) + "    " + path + "  " + str(time.time())
             timeVar += 1
             dump.close()
             time.sleep(1)

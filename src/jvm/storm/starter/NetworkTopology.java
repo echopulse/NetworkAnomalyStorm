@@ -23,20 +23,36 @@ public class NetworkTopology {
             number of columns in the matrix composed of eigenvectors
     */
 
-        //Shared Parameters
-        int tickFrequency = 1; //matrix refresh rate in seconds
+        //TESTING DATA -- REMEMBER TO CHANGE THE STREAMS
+      //Shared Parameters
+      int tickFrequency = 1; //matrix refresh rate in seconds
 
-        //DependencyMatrixBolt
-        double decay = 0.2;                 //0-1, 0 = no decay, 1 = complete substitution of matrix at each tick
-        int trainingTime = 5;               //multiples of tickFrequency
-        double replaceThreshold = 0;        //suggest: decay ^ windowSize
-        int trainingThreshold = 0;         //tuples with count below threshold during training are ignored
+      //DependencyMatrixBolt
+      double decay = 1;                 //0-1, 0 = no decay, 1 = complete substitution of matrix at each tick
+      int trainingTime = 5;               //multiples of tickFrequency
+      double replaceThreshold = 0;        //suggest: decay ^ windowSize
+      int trainingThreshold = 0;         //tuples with count below threshold during training are ignored
 
-        //AnomalyDetectionBolt
-        int windowSize = 5;                 //multiples of tickFrequency
-        double cumulativeProbabilityThreshold = 0.05;
-        String outputFileName = "decayTest";
-        String outputPath = "./dataOutput/";
+      //AnomalyDetectionBolt
+      int windowSize = 5;                 //MUST BE GREATER THAN 1
+      double cumulativeProbabilityThreshold = 0.05;
+
+
+     //LIVE DATA -- REMEMBER TO CHANGE THE STREAMS
+    /*//Shared Parameters
+    int tickFrequency = 20; //matrix refresh rate in seconds
+
+    //DependencyMatrixBolt
+    double decay = 1;                 //0-1, 0 = no decay, 1 = complete substitution of matrix at each tick
+    int trainingTime = 9;               //multiples of tickFrequency
+    double replaceThreshold = 1;        //suggest: decay ^ windowSize
+    int trainingThreshold = 10;         //tuples with count below threshold during training are ignored
+
+    //AnomalyDetectionBolt
+    int windowSize = 6;                 //MUST BE GREATER THAN 1
+    double cumulativeProbabilityThreshold = 0.05;*/
+    String outputFileName = "Tester-cumProb";
+    String outputPath = "./dataOutput/";
 
 
 
@@ -48,32 +64,47 @@ public class NetworkTopology {
     //Split
     builder.setBolt("split", new SplitBolt(), 3).shuffleGrouping("spout");
 
-    //Counts
-    //builder.setBolt("portCount", new CountBolt(), 3).fieldsGrouping("split", "Ports", new Fields("srcPort"));
-    //builder.setBolt("subnetCount", new CountBolt(), 3).fieldsGrouping("split", "Subnets", new Fields("srcSubnet"));
-
-    //Graph
-    //builder.setBolt("graph", new GraphBolt(5, 0.5), 1).shuffleGrouping("split", "Subnets");
-
-    //W = 10
+    //decay
+    //d = 1
     builder.setBolt("matrix-1", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
-    builder.setBolt("anomaly-1", new AnomalyDetectionBolt(10, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-1", "EigenStream");
-    builder.setBolt("printer-1", new PrinterBolt(outputPath + outputFileName + "1.csv"), 1).shuffleGrouping("anomaly-1", "AnomaliesStream");
+    builder.setBolt("anomaly-1", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.2), 1).shuffleGrouping("matrix-1", "EigenStream");
+    builder.setBolt("printer-1", new PrinterBolt(outputPath + outputFileName + "20.csv"), 1).shuffleGrouping("anomaly-1", "AnomaliesStream");
 
-    //W = 7
+    //d = .75
     builder.setBolt("matrix-2", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
-    builder.setBolt("anomaly-2", new AnomalyDetectionBolt(7, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-2", "EigenStream");
-    builder.setBolt("printer-2", new PrinterBolt(outputPath + outputFileName + "2.csv"), 1).shuffleGrouping("anomaly-2", "AnomaliesStream");
+    builder.setBolt("anomaly-2", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.1), 1).shuffleGrouping("matrix-2", "EigenStream");
+    builder.setBolt("printer-2", new PrinterBolt(outputPath + outputFileName + "10.csv"), 1).shuffleGrouping("anomaly-2", "AnomaliesStream");
 
-    //W = 5
+    //d = .5
     builder.setBolt("matrix-3", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
-    builder.setBolt("anomaly-3", new AnomalyDetectionBolt(5, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-3", "EigenStream");
-    builder.setBolt("printer-3", new PrinterBolt(outputPath + outputFileName + "3.csv"), 1).shuffleGrouping("anomaly-3", "AnomaliesStream");
+    builder.setBolt("anomaly-3", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.05), 1).shuffleGrouping("matrix-3", "EigenStream");
+    builder.setBolt("printer-3", new PrinterBolt(outputPath + outputFileName + "05.csv"), 1).shuffleGrouping("anomaly-3", "AnomaliesStream");
 
-    //W = 3
+    //d = .25
     builder.setBolt("matrix-4", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
-    builder.setBolt("anomaly-4", new AnomalyDetectionBolt(3, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-4", "EigenStream");
-    builder.setBolt("printer-4", new PrinterBolt(outputPath + outputFileName + "4.csv"), 1).shuffleGrouping("anomaly-4", "AnomaliesStream");
+    builder.setBolt("anomaly-4", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.025), 1).shuffleGrouping("matrix-4", "EigenStream");
+    builder.setBolt("printer-4", new PrinterBolt(outputPath + outputFileName + "025.csv"), 1).shuffleGrouping("anomaly-4", "AnomaliesStream");
+
+      /*//Decay
+      //d = 1
+      builder.setBolt("matrix-5", new DependencyMatrixBolt(tickFrequency, 1, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
+      builder.setBolt("anomaly-5", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-5", "EigenStream");
+      builder.setBolt("printer-5", new PrinterBolt(outputPath + outputFileName + "5.csv"), 1).shuffleGrouping("anomaly-5", "AnomaliesStream");
+
+      //d = 0.75
+      builder.setBolt("matrix-6", new DependencyMatrixBolt(tickFrequency, 0.75, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
+      builder.setBolt("anomaly-6", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-6", "EigenStream");
+      builder.setBolt("printer-6", new PrinterBolt(outputPath + outputFileName + "6.csv"), 1).shuffleGrouping("anomaly-6", "AnomaliesStream");
+
+      //d = 0.5
+      builder.setBolt("matrix-7", new DependencyMatrixBolt(tickFrequency, 0.5, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
+      builder.setBolt("anomaly-7", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-7", "EigenStream");
+      builder.setBolt("printer-7", new PrinterBolt(outputPath + outputFileName + "7.csv"), 1).shuffleGrouping("anomaly-7", "AnomaliesStream");
+
+      //d = 0.25
+      builder.setBolt("matrix-8", new DependencyMatrixBolt(tickFrequency, 0.25, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
+      builder.setBolt("anomaly-8", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-8", "EigenStream");
+      builder.setBolt("printer-8", new PrinterBolt(outputPath + outputFileName + "8.csv"), 1).shuffleGrouping("anomaly-8", "AnomaliesStream");*/
 
 
     Config conf = new Config();
