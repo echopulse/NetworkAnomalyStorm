@@ -19,7 +19,7 @@ try:
         currtime = 0
         timeVar = 0
         delay = 0
-        with open('/home/fil/Desktop/Python Server/timestampedDumps/dumpcsv-filtered-2015-02-27.csv', 'r') as dump:
+        with open('/home/fil/Desktop/Python Server/timestampedDumps/dumpcsv-2015-03-24-filtered.csv', 'r') as dump:
             for line in dump:
                 arr = line.split(',')
                 timestamp = long(arr[1])

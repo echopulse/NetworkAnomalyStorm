@@ -30,7 +30,7 @@ public class NetworkTopology {
       //DependencyMatrixBolt
       double decay = 1;                 //0-1, 0 = no decay, 1 = complete substitution of matrix at each tick
       int trainingTime = 5;               //multiples of tickFrequency
-      double replaceThreshold = 0;        //suggest: decay ^ windowSize
+      double replaceThreshold = 1;        //suggest: decay ^ windowSize
       int trainingThreshold = 0;         //tuples with count below threshold during training are ignored
 
       //AnomalyDetectionBolt
@@ -51,7 +51,8 @@ public class NetworkTopology {
     //AnomalyDetectionBolt
     int windowSize = 6;                 //MUST BE GREATER THAN 1
     double cumulativeProbabilityThreshold = 0.05;*/
-    String outputFileName = "Tester-cumProb";
+    String csvFileName = "trash";
+    String detailsFileName = "trashDetails";
     String outputPath = "./dataOutput/";
 
 
@@ -68,43 +69,44 @@ public class NetworkTopology {
     //d = 1
     builder.setBolt("matrix-1", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
     builder.setBolt("anomaly-1", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.2), 1).shuffleGrouping("matrix-1", "EigenStream");
-    builder.setBolt("printer-1", new PrinterBolt(outputPath + outputFileName + "20.csv"), 1).shuffleGrouping("anomaly-1", "AnomaliesStream");
+    builder.setBolt("graph-1", new GraphBolt(false, outputPath + detailsFileName + "20.txt"), 1).shuffleGrouping("matrix-1", "MatrixStream").shuffleGrouping("anomaly-1", "AnomaliesStream");
+    builder.setBolt("printer-1", new PrinterBolt(outputPath + csvFileName + "20.csv"), 1).shuffleGrouping("anomaly-1", "AnomaliesStream");
 
-    //d = .75
+  /*  //d = .75
     builder.setBolt("matrix-2", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
     builder.setBolt("anomaly-2", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.1), 1).shuffleGrouping("matrix-2", "EigenStream");
-    builder.setBolt("printer-2", new PrinterBolt(outputPath + outputFileName + "10.csv"), 1).shuffleGrouping("anomaly-2", "AnomaliesStream");
+    builder.setBolt("printer-2", new PrinterBolt(outputPath + csvFileName + "10.csv"), 1).shuffleGrouping("anomaly-2", "AnomaliesStream");
 
     //d = .5
     builder.setBolt("matrix-3", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
     builder.setBolt("anomaly-3", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.05), 1).shuffleGrouping("matrix-3", "EigenStream");
-    builder.setBolt("printer-3", new PrinterBolt(outputPath + outputFileName + "05.csv"), 1).shuffleGrouping("anomaly-3", "AnomaliesStream");
+    builder.setBolt("printer-3", new PrinterBolt(outputPath + csvFileName + "05.csv"), 1).shuffleGrouping("anomaly-3", "AnomaliesStream");
 
     //d = .25
     builder.setBolt("matrix-4", new DependencyMatrixBolt(tickFrequency, decay, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "SubnetStream");
     builder.setBolt("anomaly-4", new AnomalyDetectionBolt(windowSize, tickFrequency, 0.025), 1).shuffleGrouping("matrix-4", "EigenStream");
-    builder.setBolt("printer-4", new PrinterBolt(outputPath + outputFileName + "025.csv"), 1).shuffleGrouping("anomaly-4", "AnomaliesStream");
-
+    builder.setBolt("printer-4", new PrinterBolt(outputPath + csvFileName + "025.csv"), 1).shuffleGrouping("anomaly-4", "AnomaliesStream");
+*/
       /*//Decay
       //d = 1
       builder.setBolt("matrix-5", new DependencyMatrixBolt(tickFrequency, 1, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
       builder.setBolt("anomaly-5", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-5", "EigenStream");
-      builder.setBolt("printer-5", new PrinterBolt(outputPath + outputFileName + "5.csv"), 1).shuffleGrouping("anomaly-5", "AnomaliesStream");
+      builder.setBolt("printer-5", new PrinterBolt(outputPath + csvFileName + "5.csv"), 1).shuffleGrouping("anomaly-5", "AnomaliesStream");
 
       //d = 0.75
       builder.setBolt("matrix-6", new DependencyMatrixBolt(tickFrequency, 0.75, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
       builder.setBolt("anomaly-6", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-6", "EigenStream");
-      builder.setBolt("printer-6", new PrinterBolt(outputPath + outputFileName + "6.csv"), 1).shuffleGrouping("anomaly-6", "AnomaliesStream");
+      builder.setBolt("printer-6", new PrinterBolt(outputPath + csvFileName + "6.csv"), 1).shuffleGrouping("anomaly-6", "AnomaliesStream");
 
       //d = 0.5
       builder.setBolt("matrix-7", new DependencyMatrixBolt(tickFrequency, 0.5, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
       builder.setBolt("anomaly-7", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-7", "EigenStream");
-      builder.setBolt("printer-7", new PrinterBolt(outputPath + outputFileName + "7.csv"), 1).shuffleGrouping("anomaly-7", "AnomaliesStream");
+      builder.setBolt("printer-7", new PrinterBolt(outputPath + csvFileName + "7.csv"), 1).shuffleGrouping("anomaly-7", "AnomaliesStream");
 
       //d = 0.25
       builder.setBolt("matrix-8", new DependencyMatrixBolt(tickFrequency, 0.25, trainingTime, replaceThreshold, trainingThreshold), 1).shuffleGrouping("split", "ServiceStream");
       builder.setBolt("anomaly-8", new AnomalyDetectionBolt(windowSize, tickFrequency, cumulativeProbabilityThreshold), 1).shuffleGrouping("matrix-8", "EigenStream");
-      builder.setBolt("printer-8", new PrinterBolt(outputPath + outputFileName + "8.csv"), 1).shuffleGrouping("anomaly-8", "AnomaliesStream");*/
+      builder.setBolt("printer-8", new PrinterBolt(outputPath + csvFileName + "8.csv"), 1).shuffleGrouping("anomaly-8", "AnomaliesStream");*/
 
 
     Config conf = new Config();

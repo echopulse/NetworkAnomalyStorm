@@ -33,7 +33,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     private Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
     private DoubleMatrix dependencyMatrix;
     private Multiset<String> candidateBag = HashMultiset.create();
-
+    private int matrixID = 0;
 
     public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newTrainingThreshold)
     {
@@ -64,6 +64,7 @@ public class DependencyMatrixBolt implements IRichBolt {
             if(tickCount > trainingTime)
             {
                 dependencyMatrix = MatrixUtilities.setDiagonal(dependencyMatrix, 0.0);
+                _collector.emit("MatrixStream", new Values(dependencyMatrix, IDtoIPMap, matrixID));
 
                 //gets L2-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
@@ -74,7 +75,8 @@ public class DependencyMatrixBolt implements IRichBolt {
                 //replace decayed services, threshold is sum of service respective row/column in the dependency matrix
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
 
-                _collector.emit("EigenStream", new Values(principalEigenvector));
+                _collector.emit("EigenStream", new Values(principalEigenvector, matrixID));
+                matrixID++;
             }
             else
             {
@@ -230,7 +232,7 @@ public class DependencyMatrixBolt implements IRichBolt {
                 String candidate = bagIterator.next().getElement();
                 candidateBag.remove(candidate, candidateBag.count(candidate));
 
-                System.out.println(candidate + " replaces row " + i + " with count:" + rowSums.get(i));
+                //System.out.println("DPM:" + candidate + " replaces row " + i + " with count:" + rowSums.get(i));
 
                 //replace values in IPtoIDMap and IDtoIPMap
                 IPtoIDMap.put(candidate, i);
@@ -250,10 +252,8 @@ public class DependencyMatrixBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        outputFieldsDeclarer.declareStream("EigenStream", new Fields("eigenField"));
-
-        //multiple output
-        //outputFieldsDeclarer.declareStream("EigenVector", new Fields("eVector"));
+        outputFieldsDeclarer.declareStream("EigenStream", new Fields("eigenField", "matrixID"));
+        outputFieldsDeclarer.declareStream("MatrixStream", new Fields("dependencyMatrix", "IPtoIDMap", "matrixID"));
         //outputFieldsDeclarer.declareStream("Anomalies", new Fields("srcSubnet", "dstSubnet"));
     }
 

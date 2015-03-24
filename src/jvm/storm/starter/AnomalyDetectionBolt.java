@@ -75,8 +75,9 @@ public class AnomalyDetectionBolt implements IRichBolt {
                 //_collector.emit("plsv", new Values(plsv.transpose().mmul(inputVector).toString()));
                 double dissimilarity = 1 - (plsv.transpose().mmul(inputVector).get(0));
 
+                int matrixID = tuple.getInteger(1);
                 //Anomaly Detection Module
-                detectAnomaly(cumulativeProb, windowSize, deltaTime, firstMoment, secondMoment, dissimilarity);
+                detectAnomaly(cumulativeProb, windowSize, deltaTime, firstMoment, secondMoment, dissimilarity, matrixID);
 
             }
         }
@@ -84,7 +85,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
         _collector.ack(tuple);
     }
 
-    private void detectAnomaly(double pc, int windowSize, double deltaTime, double oldFirstMoment, double oldSecondMoment, double dissimilarity)
+    private void detectAnomaly(double pc, int windowSize, double deltaTime, double oldFirstMoment, double oldSecondMoment, double dissimilarity, int matrixID)
     {
         double beta = deltaTime / (windowSize * deltaTime);
         double firstMoment = ((1 - beta) * oldFirstMoment) + (beta*dissimilarity);
@@ -110,7 +111,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
         this.firstMoment = firstMoment;
         this.secondMoment = secondMoment;
 
-        _collector.emit("AnomaliesStream", new Values(dissimilarity, anomalyThreshold, isChiAnomaly));
+        _collector.emit("AnomaliesStream", new Values(dissimilarity, anomalyThreshold, isChiAnomaly, matrixID));
 
     }
 
@@ -122,7 +123,7 @@ public class AnomalyDetectionBolt implements IRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //single output
-        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "threshold", "isAnomaly"));
+        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "threshold", "isAnomaly", "matrixID"));
 
         //multiple output
         //outputFieldsDeclarer.declareStream("stream1Name", new Fields("fieldName"));

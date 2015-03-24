@@ -45,17 +45,17 @@ partC$time <- as.POSIXlt(as.character(partC$Timestamp), format="%H:%M:%S")
 partD$time <- as.POSIXlt(as.character(partD$Timestamp), format="%H:%M:%S")
 
 #timestamp correction
-partA$time <- partA$time - (1426355749 - 1425055320)
-partB$time <- partB$time - (1426355749 - 1425055320)
-partC$time <- partC$time - (1426355749 - 1425055320)
-partD$time <- partD$time - (1426355749 - 1425055320)
+partA$time <- partA$time - (1426442149 - 1425055320)
+partB$time <- partB$time - (1426442149 - 1425055320)
+partC$time <- partC$time - (1426442149 - 1425055320)
+partD$time <- partD$time - (1426442149 - 1425055320)
 
-ggplot(partA, aes(x = time, y = Chi-zth)) + 
-  geom_line(aes(y = partA$Threshold, colour = "cumProb=0.20")) + 
-  geom_line(aes(y = partB$Threshold, colour = "cumProb=0.10")) + 
-  geom_line(aes(y = partC$Threshold, colour = "cumProb=0.05")) + 
-  geom_line(aes(y = partD$Threshold, colour = "cumProb=0.025")) + 
-  geom_line(aes(y = partA$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed") +
+ggplot(partC, aes(x = time, y = Threshold)) + 
+  #geom_line(aes(y = partA$Threshold, colour = "Pc = 0.20")) + 
+  #geom_line(aes(y = partB$Threshold, colour = "Pc = 0.10")) + 
+  geom_line(aes(y = partC$Threshold, colour = "Threshold")) + 
+  #geom_line(aes(y = partD$Threshold, colour = "Pc = 0.025")) + 
+  geom_line(aes(y = partC$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed") +
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:48:00 GMT"))), color = "green", linetype="dotted") + 
@@ -64,7 +64,19 @@ ggplot(partA, aes(x = time, y = Chi-zth)) +
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted") + 
   theme(legend.title=element_blank()) + 
-  ggtitle("Cumulative Probability Experiment\nfixed variables: decay = 1, window=6, replace threshold = 1, tick = 20")
+  ggtitle("Hadoop Threshold & Dissimilarity\nvariables: decay = 1, window=6, replace threshold = 1, tick = 20, Pc = 0.05")
+
+ggplot(partC, aes(x = time, y = Threshold, colour = Anomaly)) +
+  geom_line(aes(y = partC$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed", color = "violet") +
+  geom_point() +
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:48:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:50:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:52:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted") + 
+  ggtitle("Anomalies and Thresholds Over Time\nvariables: decay = 100%, window= 2min, replace threshold = 1, tick = 20s, Pc = 0.05")
 
 
 #Histogram
@@ -91,18 +103,18 @@ partC$time <- as.POSIXlt(as.character(partC$Timestamp), format="%H:%M:%S")
 partD$time <- as.POSIXlt(as.character(partD$Timestamp), format="%H:%M:%S")
 
 #timestamp correction // not needed during testing
-partA$time <- partA$time - (1426370948 - 1425055320)
-partB$time <- partB$time - (1426370888 - 1425055320)
-partC$time <- partC$time - (1426370828 - 1425055320) 
-partD$time <- partD$time - (1426370768 - 1425055320) 
+partA$time <- partA$time - (1426457348 - 1425055320)
+partB$time <- partB$time - (1426457288 - 1425055320)
+partC$time <- partC$time - (1426457228 - 1425055320) 
+partD$time <- partD$time - (1426457168 - 1425055320) 
 
 partA$var <- "W=12" 
 partB$var <- "W=9"
 partC$var <- "W=6" 
 partD$var <- "W=3" #1 minute
 #df = rbind(partD)
-df = rbind(partA, partB, partC)
-#df = rbind(partA, partB, partC, partD)
+#df = rbind(partA, partB, partC)
+df = rbind(partA, partB, partC, partD)
 ggplot(df, aes(x = time, y = Threshold, color = var)) + 
   geom_line() + 
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
@@ -113,10 +125,20 @@ ggplot(df, aes(x = time, y = Threshold, color = var)) +
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
   geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted") + 
   theme(legend.title=element_blank()) + 
-  ggtitle("Window Size Experiment\nfixed variables: cum.prob. = 0.05, decay = 1, replace threshold = 1, tick = 20")
+  ggtitle("Window Size Experiment\nfixed variables: Pc = 0.05, decay = 1, replace threshold = 1, tick = 20s")
 
 #point plot
-ggplot(partD, aes(x = time, y = Threshold, colour = Anomaly)) + geom_point()
+ggplot(partD, aes(x = time, y = Threshold, colour = Anomaly)) + 
+  geom_line(aes(y = partD$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed", color = "violet") +
+  geom_point() +
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:48:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:50:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:52:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted")  +
+ggtitle("Window Size Experiment\nfixed variables: Pc = 0.05, decay = 100%, replace threshold = 1, tick = 20s, Window = 1 min")
 
 
 #DECAY LIVE
