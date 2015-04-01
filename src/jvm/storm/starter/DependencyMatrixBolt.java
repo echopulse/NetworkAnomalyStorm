@@ -16,9 +16,6 @@ import org.jblas.DoubleMatrix;
 
 import java.util.*;
 
-/**
- * Created by fil on 22/01/15.
- */
 public class DependencyMatrixBolt implements IRichBolt {
 
     OutputCollector _collector;
@@ -64,16 +61,17 @@ public class DependencyMatrixBolt implements IRichBolt {
             if(tickCount > trainingTime)
             {
                 dependencyMatrix = MatrixUtilities.setDiagonal(dependencyMatrix, 0.0);
+                //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
                 _collector.emit("MatrixStream", new Values(dependencyMatrix, IDtoIPMap, matrixID));
 
                 //gets L2-normalized principal eigenvector
                 DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
 
-                //decay dependency matrix values
-                dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
-
                 //replace decayed services, threshold is sum of service respective row/column in the dependency matrix
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
+
+                //decay dependency matrix values
+                dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
 
                 _collector.emit("EigenStream", new Values(principalEigenvector, matrixID));
                 matrixID++;
@@ -138,14 +136,10 @@ public class DependencyMatrixBolt implements IRichBolt {
         //if IPs are not in the matrix, add them to the multiset bag of candidates
         else
         {
-            //candidateBag size set to not exceed 20% of dependency matrix size
-            if(candidateBag.size() < (int)(dependencyMatrix.rows * 0.2))
-            {
-                if(srcID == null)
-                    candidateBag.add(srcIP);
-                if(dstID == null)
-                    candidateBag.add(dstIP);
-            }
+            if(srcID == null)
+                candidateBag.add(srcIP);
+            if(dstID == null)
+                candidateBag.add(dstIP);
         }
     }
 
@@ -190,14 +184,13 @@ public class DependencyMatrixBolt implements IRichBolt {
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
 
         int i = 0;
-        System.out.println("---");
         while(bagIterator.hasNext())
         {
             Multiset.Entry<String> entry = bagIterator.next();
-            if(entry.getCount() >= threshold)
+            if(IPtoIDMap.size() < threshold)
             {
                 String candidate =  entry.getElement();
-                System.out.println(candidate + "-> " + entry.getCount());
+                //System.out.println(candidate + "-> " + entry.getCount());
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
                 i++;
@@ -214,11 +207,12 @@ public class DependencyMatrixBolt implements IRichBolt {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
         DoubleMatrix rowSums = dependencyMatrix.rowSums();
-
+        int replaced = 0;
+        int bagSize = candidateBag.size();
         //sets column and row i to zeros if their sum is below a threshold
         for(int i = 0; i < rowSums.getRows(); i++)
         {
-            if(bagIterator.hasNext() && rowSums.get(i) < replaceThreshold)
+            if(bagIterator.hasNext() && rowSums.get(i) < replaceThreshold )//&& replaced < dependencyMatrix.getRows() * 0.10)
             {
                 //clear row and columns in dependency matrix
                 DoubleMatrix zeroVector = DoubleMatrix.zeros(rowSums.getRows());
@@ -226,21 +220,23 @@ public class DependencyMatrixBolt implements IRichBolt {
                 dependencyMatrix.putColumn(i, zeroVector);
 
                 //remap index to new IP
-                IPtoIDMap.remove(IDtoIPMap.remove(i));
+                String rejectedIP = IDtoIPMap.remove(i);
+                IPtoIDMap.remove(rejectedIP);
 
                 //get highest counted not included
                 String candidate = bagIterator.next().getElement();
                 candidateBag.remove(candidate, candidateBag.count(candidate));
 
-                //System.out.println("DPM:" + candidate + " replaces row " + i + " with count:" + rowSums.get(i));
+                //System.out.println("DPM: " + candidate + " replaces" + rejectedIP + " having count:" + rowSums.get(i));
 
                 //replace values in IPtoIDMap and IDtoIPMap
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
+                replaced++;
 
             }
         }
-
+        if(replaced > 0){ System.out.println("replaced " + replaced + " out of " + dependencyMatrix.getColumns() + ", bagsize: " + bagSize); }
         candidateBag.clear();
     }
 
@@ -251,10 +247,8 @@ public class DependencyMatrixBolt implements IRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        //single output
         outputFieldsDeclarer.declareStream("EigenStream", new Fields("eigenField", "matrixID"));
         outputFieldsDeclarer.declareStream("MatrixStream", new Fields("dependencyMatrix", "IPtoIDMap", "matrixID"));
-        //outputFieldsDeclarer.declareStream("Anomalies", new Fields("srcSubnet", "dstSubnet"));
     }
 
     @Override

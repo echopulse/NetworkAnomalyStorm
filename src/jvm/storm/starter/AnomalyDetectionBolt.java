@@ -7,13 +7,12 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
-import org.apache.commons.math3.distribution.GammaDistribution;
 import org.jblas.DoubleMatrix;
-
+import org.apache.commons.math3.distribution.ChiSquaredDistribution;
 import java.util.Map;
 
 /**
- * Created by fil on 01/02/15.
+ * Applies anomaly detection algorithm to incoming eigenvector stream
  */
 public class AnomalyDetectionBolt implements IRichBolt {
 
@@ -39,12 +38,10 @@ public class AnomalyDetectionBolt implements IRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-    //Vectors are entering at tick speed defined in DependencyMatrixBolt so there is no need for it here.
 
         DoubleMatrix inputVector = (DoubleMatrix) tuple.getValue(0);
-        //System.out.println("inputVector:" + inputVector);
 
-        //initialize windowMatrix if null
+        //initializes windowMatrix if null
         if(windowMatrix == null)
         {
             windowMatrix = inputVector;
@@ -54,60 +51,53 @@ public class AnomalyDetectionBolt implements IRichBolt {
             if (windowMatrix.columns < windowSize)
             {
                 //append new vectors to windowMatrix
-                windowMatrix = windowMatrix.concatHorizontally(windowMatrix, inputVector);
+                windowMatrix = DoubleMatrix.concatHorizontally(windowMatrix, inputVector);
             }
             else
             {
-                //window moves forward, vector position 0 gets deleted, vector in last position is latest vector
+                //window moves forward, vector position 0 gets deleted, vector in last position is newest vector
                 DoubleMatrix newMatrix = windowMatrix.getColumn(1);
                 for(int i = 2; i < windowSize; i++)
                 {
-                    newMatrix = newMatrix.concatHorizontally(newMatrix, windowMatrix.getColumn(i));
+                    newMatrix = DoubleMatrix.concatHorizontally(newMatrix, windowMatrix.getColumn(i));
                 }
-                newMatrix = newMatrix.concatHorizontally(newMatrix, inputVector);
+                newMatrix = DoubleMatrix.concatHorizontally(newMatrix, inputVector);
 
 
-               //get L2 normalized principal left singular vector
+               //get L2 normalized principal left singular vector: r(t-1)
                 DoubleMatrix plsv = MatrixUtilities.getPLSV(windowMatrix);
 
                 windowMatrix = newMatrix;
-                //z(t) = 1 - r(t-1)^T x u(t)
-                //_collector.emit("plsv", new Values(plsv.transpose().mmul(inputVector).toString()));
+
+                //z(t) = 1 - r(t-1)^T x u(t) where u(t) is the incoming eigenvector
                 double dissimilarity = 1 - (plsv.transpose().mmul(inputVector).get(0));
 
-                int matrixID = tuple.getInteger(1);
-                //Anomaly Detection Module
-                detectAnomaly(cumulativeProb, windowSize, deltaTime, firstMoment, secondMoment, dissimilarity, matrixID);
+                int matrixID = tuple.getInteger(1); //needed in the GraphBolt
 
+                detectAnomaly(firstMoment, secondMoment, dissimilarity, matrixID);
             }
         }
 
         _collector.ack(tuple);
     }
 
-    private void detectAnomaly(double pc, int windowSize, double deltaTime, double oldFirstMoment, double oldSecondMoment, double dissimilarity, int matrixID)
+    private void detectAnomaly(double oldFirstMoment, double oldSecondMoment, double dissimilarity, int matrixID)
     {
         double beta = deltaTime / (windowSize * deltaTime);
         double firstMoment = ((1 - beta) * oldFirstMoment) + (beta*dissimilarity);
         double secondMoment = ((1 - beta) * oldSecondMoment) + (beta*Math.pow(dissimilarity, 2));
         double nMinusOne = (2 * Math.pow(firstMoment, 2)) / (secondMoment - Math.pow(firstMoment, 2));
-        //double sigma = (secondMoment - Math.pow(firstMoment, 2))/(2*firstMoment);
 
-        //double scale = 2 * sigma;
-        //double shape = nMinusOne / 2;
+        //gets new Chi^2 curve for the current tick.
+        ChiSquaredDistribution chi = new ChiSquaredDistribution(nMinusOne);
 
-        //GammaDistribution gamma = new GammaDistribution(shape, scale);
-        org.apache.commons.math3.distribution.ChiSquaredDistribution chi = new org.apache.commons.math3.distribution.ChiSquaredDistribution(nMinusOne);
+        double anomalyThreshold = chi.inverseCumulativeProbability(cumulativeProb);
 
-        double anomalyThreshold = chi.inverseCumulativeProbability(pc);
-        //double zth = gamma.inverseCumulativeProbability(pc);
-
-        //boolean isGammaAnomaly = dissimilarity > zth;
         boolean isChiAnomaly = dissimilarity > anomalyThreshold;
 
-        //System.out.println(beta + ", " + firstMoment + ", " + secondMoment + ", " + sigma + ", " + shape + ", " + scale + ", " + dissimilarity + ", " + zth + ", " + (dissimilarity - zth) + ", " + isGammaAnomaly + ", " + anomalyThreshold + ", " + isChiAnomaly);
         System.out.println(dissimilarity + ", " + anomalyThreshold + ", " + isChiAnomaly + ", " + nMinusOne);
 
+        //updates moments values
         this.firstMoment = firstMoment;
         this.secondMoment = secondMoment;
 
@@ -122,12 +112,8 @@ public class AnomalyDetectionBolt implements IRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        //single output
-        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "threshold", "isAnomaly", "matrixID"));
 
-        //multiple output
-        //outputFieldsDeclarer.declareStream("stream1Name", new Fields("fieldName"));
-        //outputFieldsDeclarer.declareStream("stream2Name", new Fields("field1", "field2"));
+        outputFieldsDeclarer.declareStream("AnomaliesStream", new Fields("dissimilarity", "threshold", "isAnomaly", "matrixID"));
     }
 
     @Override

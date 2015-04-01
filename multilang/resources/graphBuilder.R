@@ -182,3 +182,94 @@ ggplot(partA, aes(x = time, y = Threshold)) +
   ggtitle("Decay Experiment\nfixed variables: cum.prob. = 0.05, window=6, replace threshold = 1, tick = 20")
 
 
+#FrequencyB
+
+
+#NB: partD has 60sec tick, 3 min window rather than 2 min
+partA <- read.csv("~/Documents/WordCountStorm/dataOutput/frequencyB20.csv")
+partB <- read.csv("~/Documents/WordCountStorm/dataOutput/frequencyB15.csv")
+partC <- read.csv("~/Documents/WordCountStorm/dataOutput/frequencyB30.csv")
+partD <- read.csv("~/Documents/WordCountStorm/dataOutput/frequencyB60.csv")
+partA$time <- as.POSIXlt(as.character(partA$Timestamp), format="%F %H:%M:%S")
+partB$time <- as.POSIXlt(as.character(partB$Timestamp), format="%F %H:%M:%S")
+partC$time <- as.POSIXlt(as.character(partC$Timestamp), format="%F %H:%M:%S")
+partD$time <- as.POSIXlt(as.character(partD$Timestamp), format="%F %H:%M:%S")
+
+#timestamp correction
+partA$time <- partA$time - (1427240919 - 1425055320)
+partB$time <- partB$time - (1427240919 - 1425055320)
+partC$time <- partC$time - (1427240919 - 1425055320)
+partD$time <- partD$time - (1427240919 - 1425055320)
+
+ggplot(partA, aes(x = time, y = Threshold)) + 
+  #geom_line(aes(y = partA$Threshold, colour = "Pc = 0.20")) + 
+  #geom_line(aes(y = partB$Threshold, colour = "Pc = 0.10")) + 
+  geom_line(aes(y = partA$Threshold, colour = "Threshold")) + 
+  #geom_line(aes(y = partD$Threshold, colour = "Pc = 0.025")) + 
+  geom_line(aes(y = partA$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed") +
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:48:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:50:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:52:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted") + 
+  theme(legend.title=element_blank()) + 
+  ggtitle("Hadoop Threshold & Dissimilarity\nvariables: decay = 1, window=2min, replace threshold = 1, tick = 20, Pc = 0.05")
+
+ggplot(partA, aes(x = time, y = Threshold, colour = Anomaly)) +
+  geom_line(aes(y = partA$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed", color = "violet") +
+  geom_point() +
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:48:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:50:00 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:52:00 GMT"))), color = "green", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:53:44 GMT"))), color = "red", linetype="dotted") + 
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:57:00 GMT"))), color = "green", linetype="dotted") + 
+  ggtitle("Anomalies and Thresholds Over Time\nvariables: decay = 100%, window= 2min, replace threshold = 1, tick = 20s, Pc = 0.05")
+
+
+
+
+
+
+
+#NEW CUMPROB
+
+library("ggplot2")
+partA <- read.csv("~/Documents/WordCountStorm/dataOutput/cumProbB30.csv")
+partB <- read.csv("~/Documents/WordCountStorm/dataOutput/cumProbB20.csv")
+partC <- read.csv("~/Documents/WordCountStorm/dataOutput/cumProbB10.csv")
+partD <- read.csv("~/Documents/WordCountStorm/dataOutput/cumProbB05.csv")
+partA$time <- as.POSIXlt(as.character(partA$Timestamp), format="%F %H:%M:%S")
+partB$time <- as.POSIXlt(as.character(partB$Timestamp), format="%F %H:%M:%S")
+partC$time <- as.POSIXlt(as.character(partC$Timestamp), format="%F %H:%M:%S")
+partD$time <- as.POSIXlt(as.character(partD$Timestamp), format="%F %H:%M:%S")
+
+#timestamp correction
+partA$time <- partA$time - (1427246537 - 1427205600)
+partB$time <- partB$time - (1427246537 - 1427205600)
+partC$time <- partC$time - (1427246537 - 1427205600)
+partD$time <- partD$time - (1427246537 - 1427205600)
+
+ggplot(partC, aes(x = time, y = Threshold)) + 
+  #geom_line(aes(y = partA$Threshold, colour = "Pc = 0.20")) + 
+  #geom_line(aes(y = partB$Threshold, colour = "Pc = 0.10")) + 
+  geom_line(aes(y = partC$Threshold, colour = "Threshold")) + 
+  #geom_line(aes(y = partD$Threshold, colour = "Pc = 0.025")) + 
+  geom_line(aes(y = partC$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed") +
+  #geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:42:00 GMT"))), color = "green", linetype="dotted") + 
+  #geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  theme(legend.title=element_blank()) + 
+  ggtitle("Hadoop Threshold & Dissimilarity\nvariables: decay = 1, window=2min, replace threshold = 1, tick = 20, Pc = 0.05")
+
+ggplot(partC, aes(x = time, y = Threshold, colour = Anomaly)) +
+  geom_line(aes(y = partC$Dissimilarity, colour = "Dissimilarity"), linetype = "dashed", color = "violet") +
+  geom_point() +
+  geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-03-24 14:11:25 GMT"))), color = "green", linetype="dotted") + 
+  #geom_vline(xintercept = as.numeric(as.POSIXlt(as.character("2015-02-27 16:46:00 GMT"))), color = "red", linetype="dotted") + 
+  ggtitle("Anomalies and Thresholds Over Time\nvariables: decay = 100%, window= 2min, replace threshold = 1, tick = 20s, Pc = 0.05")
+
+
+

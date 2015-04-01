@@ -7,12 +7,10 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
-
 import java.util.Map;
-
-/**
- * Created by fil on 08/11/14.
- */
+/*
+* Prepares tuples by filtering spout data for relevant information
+*/
 public class SplitBolt implements IRichBolt
 {
     private OutputCollector _collector;
@@ -25,7 +23,7 @@ public class SplitBolt implements IRichBolt
 
     @Override
     public void execute(Tuple tuple) {
-        //Current tuple example:
+        //incoming tuple example:
         //138.37.95.20,1414972694,138.37.88.245,138.37.89.120,2049,808
         //switchIP, timestamp, srcIP, dstIP, srcPort, dstPort
 
@@ -41,17 +39,15 @@ public class SplitBolt implements IRichBolt
 
         //clears empty cases
         if(srcIP.length() > 1 && dstIP.length() > 1) {
+
             //extract octets
             String[] srcOctets = srcIP.split("\\.");
             String[] dstOctets = dstIP.split("\\.");
 
-
-            String srcSubnet = "";
-            String dstSubnet = "";
-
             //clears IPv6 cases
             if (srcOctets.length > 1 && dstOctets.length > 1) {
 
+                //emits IP+Port pairs for predefined Hadoop services
                 if(isHadoopService(srcPort) || isHadoopService(dstPort))
                 {
                     String srcService = srcIP + ":" + srcPort;
@@ -59,15 +55,18 @@ public class SplitBolt implements IRichBolt
                     _collector.emit("ServiceStream", new Values(srcService, dstService));
                 }
 
-
+                //emits first n IP addresses' octets
                 int octets = 3;
                 String[] subnets = getSubnets(srcOctets, dstOctets, octets);
-                srcSubnet = subnets[0];
-                dstSubnet = subnets[1];
-
-
+                String srcSubnet = subnets[0];
+                String dstSubnet = subnets[1];
                 _collector.emit("SubnetStream", new Values(srcSubnet, dstSubnet));
-                _collector.emit("Ports", new Values(srcPort, dstPort));
+
+                //emits IPs belonging to ITL machines
+                if(srcSubnet.equals("138.37.36") || dstSubnet.equals("138.37.36"))
+                {
+                    _collector.emit("ITLStream", new Values(srcIP, dstIP));
+                }
             }
         }
 
@@ -105,7 +104,8 @@ public class SplitBolt implements IRichBolt
                 8088,   //HadoopYARNResourceManagerWeb
                 8040, 8041, 8042,   //HadoopNodeManager
                 10020, 19888, //HadoopMRJobHistory
-                2181    //HadoopZookeeper
+                2181,    //HadoopZookeeper
+                7077,    //Spark
         };
 
         for (int hadoopPort : hadoopPorts) {
@@ -123,8 +123,8 @@ public class SplitBolt implements IRichBolt
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream("SubnetStream", new Fields("srcSubnet", "dstSubnet"));
-        declarer.declareStream("Ports", new Fields("srcPort", "dstPort"));
         declarer.declareStream("ServiceStream", new Fields("srcService", "dstService"));
+        declarer.declareStream("ITLStream", new Fields("srcIP", "dstIP"));
     }
 
     @Override

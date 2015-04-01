@@ -1,15 +1,12 @@
 package storm.starter;
 
 import org.jblas.*;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Created by fil on 05/02/15.
+ * Pseudo-static class containing Tools for managing matrix data
  */
-
-//pseudo-static class containing matrix utility methods
 public final class MatrixUtilities {
 
     private MatrixUtilities()

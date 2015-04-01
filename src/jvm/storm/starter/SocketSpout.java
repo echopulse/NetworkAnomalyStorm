@@ -15,7 +15,7 @@ import java.net.Socket;
 import java.util.Map;
 
 /**
- * Created by fil on 08/11/14.
+ * Connects to server streaming sFlow data
  */
 public class SocketSpout extends BaseRichSpout
 {
@@ -51,9 +51,7 @@ public class SocketSpout extends BaseRichSpout
         try {
             String str;
             while ((str = reader.readLine()) != null) {
-                //if(str.startsWith("FLOW")) {
-                    this._collector.emit(new Values(str));
-                //}
+                this._collector.emit(new Values(str));
             }
         }
         catch (Exception ex){

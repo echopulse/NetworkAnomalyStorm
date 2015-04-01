@@ -17,6 +17,10 @@ import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/*
+* Provides detailed output information for each anomaly
+* optionally outputs a graph of the current state of the network using the GraphStream library
+*/
 public class GraphBolt implements IRichBolt{
 
     OutputCollector _collector;
@@ -35,10 +39,6 @@ public class GraphBolt implements IRichBolt{
         this.displayGraph = displayGraph;
         this.filename = filename;
     }
-
-
-
-
 
     @Override
     public void prepare(Map config, TopologyContext topology, OutputCollector collector) {
@@ -145,7 +145,7 @@ public class GraphBolt implements IRichBolt{
             String timestamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date());
 
             if(isAnomaly && matrixID == anomalyID){
-                System.out.println("\nANOMALY tick: +" + matrixID + "@" + timestamp);
+                System.out.println("\nANOMALY tick: +" + matrixID + "@" + timestamp + " " + IDtoIPMap.size() + " " + dependencyMatrix.getColumns());
                 writer.println("\nANOMALY tick: +" + matrixID + "@" + timestamp);
                 boolean changes = false;
 
@@ -153,11 +153,17 @@ public class GraphBolt implements IRichBolt{
 
                     String rowKey= IDtoIPMap.get(i);
                     String changeReport = "no changes";
-                    boolean keyChange = oldMap != null && !oldMap.get(i).equals(rowKey);
+                    boolean keyChange = false;
 
-                    if(keyChange){
-                        changeReport = rowKey + " replaces " + oldMap.get(i);
-                        changes = true;
+                    if(oldMap != null){
+                        if(oldMap.get(i) != null && !oldMap.get(i).equals(rowKey)){
+                            keyChange = true;
+                            changeReport = rowKey + " replaces " + oldMap.get(i);
+                        }
+                        else if(oldMap.get(i) == null && rowKey != null) {
+                            keyChange = true;
+                            changeReport = rowKey + " replaces null"; //should never happen
+                        }
                     }
 
                     for (int j = i + 1; j < dependencyMatrix.getColumns(); j++) {
@@ -175,6 +181,7 @@ public class GraphBolt implements IRichBolt{
                         else if(keyChange){
                             System.out.println(changeReport + ": " + count);
                             writer.println(changeReport + ": " + count);
+                            changes = true;
                         }
                     }
                 }
@@ -183,9 +190,6 @@ public class GraphBolt implements IRichBolt{
                     System.out.println("No changes");
                 }
                 writer.flush();
-
-                //graph.addAttribute("ui.screenshot", "/home/fil/Documents/WordCountStorm/screenshots/graph" + matrixID +".png");
-                //oldGraph.addAttribute("ui.screenshot", "/home/fil/Documents/WordCountStorm/screenshots/oldgraph" + matrixID +".png");
             }
         }
     }

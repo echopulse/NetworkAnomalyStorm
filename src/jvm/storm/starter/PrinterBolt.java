@@ -18,7 +18,7 @@ public class PrinterBolt extends BaseRichBolt {
     PrintWriter writer;
     private OutputCollector _collector;
     private String filename;
-    private DateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd.HH:mm:ss");
+    private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public PrinterBolt(String filename)
     {
