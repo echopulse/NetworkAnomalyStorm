@@ -46,7 +46,6 @@ public class PrinterBolt extends BaseRichBolt {
         String threshold = tuple.getDouble(1).toString();
         String anomaly = tuple.getBoolean(2).toString();
 
-        //System.out.println(dateFormat.format(date) + "," + dissimilarity + "," + threshold + ","+anomaly);
         writer.println(dateFormat.format(date) + "," + dissimilarity + "," +threshold+ ","+anomaly);
         writer.flush();
 

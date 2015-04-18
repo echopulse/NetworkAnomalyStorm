@@ -61,10 +61,11 @@ public class DependencyMatrixBolt implements IRichBolt {
             if(tickCount > trainingTime)
             {
                 dependencyMatrix = MatrixUtilities.setDiagonal(dependencyMatrix, 0.0);
-                //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
+
+                //emit labeled matrix and map for use by GraphBolt
                 _collector.emit("MatrixStream", new Values(dependencyMatrix, IDtoIPMap, matrixID));
 
-                //replace decayed services, threshold is sum of service respective row/column in the dependency matrix
+                //replace inactive matrix keys
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
 
                 //gets L2-normalized principal eigenvector
@@ -73,6 +74,7 @@ public class DependencyMatrixBolt implements IRichBolt {
                 //decay dependency matrix values
                 dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
 
+                //emit principal eigenvector for use by AnomalyDetectionBolt
                 _collector.emit("EigenStream", new Values(principalEigenvector, matrixID));
                 matrixID++;
             }
@@ -190,7 +192,6 @@ public class DependencyMatrixBolt implements IRichBolt {
             if(IPtoIDMap.size() < matrixLimit)
             {
                 String candidate =  entry.getElement();
-                //System.out.println(candidate + "-> " + entry.getCount());
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
                 i++;
@@ -208,8 +209,7 @@ public class DependencyMatrixBolt implements IRichBolt {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
         DoubleMatrix rowSums = dependencyMatrix.rowSums();
-        int replaced = 0;
-        int bagSize = candidateBag.size();
+
         //sets column and row i to zeros if their sum is below a threshold
         for(int i = 0; i < rowSums.getRows(); i++)
         {
@@ -228,16 +228,11 @@ public class DependencyMatrixBolt implements IRichBolt {
                 String candidate = bagIterator.next().getElement();
                 candidateBag.remove(candidate, candidateBag.count(candidate));
 
-                //System.out.println("DPM: " + candidate + " replaces" + rejectedIP + " having count:" + rowSums.get(i));
-
                 //replace values in IPtoIDMap and IDtoIPMap
                 IPtoIDMap.put(candidate, i);
                 IDtoIPMap.put(i, candidate);
-                replaced++;
-
             }
         }
-        if(replaced > 0){ System.out.println("replaced " + replaced + " out of " + dependencyMatrix.getColumns() + ", bagsize: " + bagSize); }
         candidateBag.clear();
     }
 

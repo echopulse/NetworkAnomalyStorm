@@ -145,7 +145,6 @@ public class GraphBolt implements IRichBolt{
             String timestamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date());
 
             if(isAnomaly && matrixID == anomalyID){
-                System.out.println("\nANOMALY tick: +" + matrixID + "@" + timestamp + " " + IDtoIPMap.size() + " " + dependencyMatrix.getColumns());
                 writer.println("\nANOMALY tick: +" + matrixID + "@" + timestamp);
                 boolean changes = false;
 
@@ -174,12 +173,10 @@ public class GraphBolt implements IRichBolt{
                         double oldCount = oldDependencyMatrix.get(i, j);
 
                         if (!keyChange && (count != oldCount)) {
-                            System.out.println(rowKey + "->" + colKey + ": " + count + " (" + (count - oldCount) + ")");
                             writer.println(rowKey + "->" + colKey + ": " + count + " (" + (count - oldCount) + ")");
                             changes=true;
                         }
                         else if(keyChange){
-                            System.out.println(changeReport + ": " + count);
                             writer.println(changeReport + ": " + count);
                             changes = true;
                         }
@@ -187,7 +184,6 @@ public class GraphBolt implements IRichBolt{
                 }
                 if(!changes){
                     writer.println("No changes");
-                    System.out.println("No changes");
                 }
                 writer.flush();
             }
