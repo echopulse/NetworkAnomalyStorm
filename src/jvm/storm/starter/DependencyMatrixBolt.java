@@ -24,7 +24,7 @@ public class DependencyMatrixBolt implements IRichBolt {
     private int tickCount = 0;
     private int trainingTime = 0;
     private int lastMapValue = 0;
-    private int trainingThreshold = 0;
+    private int matrixSizeLimit = 0;
     private double replaceThreshold = 0;
     private Map<String, Integer> IPtoIDMap = new HashMap<String, Integer>();
     private Map<Integer, String> IDtoIPMap = new TreeMap<Integer, String>();
@@ -32,13 +32,13 @@ public class DependencyMatrixBolt implements IRichBolt {
     private Multiset<String> candidateBag = HashMultiset.create();
     private int matrixID = 0;
 
-    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newTrainingThreshold)
+    public DependencyMatrixBolt(int newTickFrequency, double newDecayVar, int newTrainingTime, double newReplaceThreshold, int newMatrixSizeLimit)
     {
         tickFrequency = newTickFrequency;
         decayWeight = newDecayVar;
         trainingTime = newTrainingTime;
         replaceThreshold = newReplaceThreshold;
-        trainingThreshold = newTrainingThreshold;
+        matrixSizeLimit = newMatrixSizeLimit;
     }
 
     private boolean isTickTuple(Tuple tuple){
@@ -64,11 +64,11 @@ public class DependencyMatrixBolt implements IRichBolt {
                 //dependencyMatrix = MatrixUtilities.naturalLogMatrix(dependencyMatrix);
                 _collector.emit("MatrixStream", new Values(dependencyMatrix, IDtoIPMap, matrixID));
 
-                //gets L2-normalized principal eigenvector
-                DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
-
                 //replace decayed services, threshold is sum of service respective row/column in the dependency matrix
                 if(replaceThreshold > 0) replaceDecayedIPs(replaceThreshold);
+
+                //gets L2-normalized principal eigenvector
+                DoubleMatrix principalEigenvector = MatrixUtilities.getPrincipalEigenvector(dependencyMatrix);
 
                 //decay dependency matrix values
                 dependencyMatrix = (dependencyMatrix.mul(1 - decayWeight));
@@ -89,7 +89,7 @@ public class DependencyMatrixBolt implements IRichBolt {
             //Training Phase
             if(tickCount <= trainingTime)
             {
-                if(trainingThreshold > 0)
+                if(matrixSizeLimit > 0)
                 {
                     incrementBags(srcIP, dstIP);
                 }
@@ -103,9 +103,9 @@ public class DependencyMatrixBolt implements IRichBolt {
             {
                 if(dependencyMatrix == null)
                 {
-                    if(trainingThreshold > 0)
+                    if(matrixSizeLimit > 0)
                     {
-                        useSortedMapValues(trainingThreshold);
+                        useSortedMapValues(matrixSizeLimit);
                     }
 
                     dependencyMatrix = new DoubleMatrix(lastMapValue,lastMapValue).fill(0);
@@ -177,8 +177,8 @@ public class DependencyMatrixBolt implements IRichBolt {
         candidateBag.add(dstIP);
     }
 
-    //sets dependency matrix creation variables to account for top counted tuples in training
-    private void useSortedMapValues(int threshold)
+    //sets dependency matrix creation variables to account for top counted tuples in training until matrix limit is reached
+    private void useSortedMapValues(int matrixLimit)
     {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);
         Iterator<Multiset.Entry<String>> bagIterator = highCountFirst.entrySet().iterator();
@@ -187,7 +187,7 @@ public class DependencyMatrixBolt implements IRichBolt {
         while(bagIterator.hasNext())
         {
             Multiset.Entry<String> entry = bagIterator.next();
-            if(IPtoIDMap.size() < threshold)
+            if(IPtoIDMap.size() < matrixLimit)
             {
                 String candidate =  entry.getElement();
                 //System.out.println(candidate + "-> " + entry.getCount());
@@ -202,6 +202,7 @@ public class DependencyMatrixBolt implements IRichBolt {
 
     }
 
+    //replaces dependency matrix keys belonging to nodes whose activity was below the given threshold with more active ones
     private void replaceDecayedIPs(double replaceThreshold)
     {
         Multiset<String> highCountFirst = Multisets.copyHighestCountFirst(candidateBag);

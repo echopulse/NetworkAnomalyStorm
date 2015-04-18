@@ -23,6 +23,14 @@ public class SocketSpout extends BaseRichSpout
     TopologyContext _context;
     Socket sock;
     BufferedReader reader;
+    String host;
+    int port;
+
+    public SocketSpout(String host, int port)
+    {
+        this.host = host;
+        this.port = port;
+    }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -35,7 +43,7 @@ public class SocketSpout extends BaseRichSpout
         _context = context;
 
         try{
-            sock = new Socket("Wintermute", 9999);
+            sock = new Socket(host, port);
             reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
         }
         catch(Exception ex)
